@@ -16,8 +16,8 @@ enum GoalStatus {
   active,
   @JsonValue('completed')
   completed,
-  @JsonValue('abandoned')
-  abandoned,
+  @JsonValue('archived')
+  archived,
   unknown,
 }
 
@@ -32,7 +32,7 @@ enum FrequencyPer {
 extension GoalStatusX on GoalStatus {
   String? get badgeLabel => switch (this) {
         GoalStatus.completed => '완료',
-        GoalStatus.abandoned => '중단',
+        GoalStatus.archived => '보관',
         _ => null,
       };
 }
@@ -61,6 +61,7 @@ abstract class GoalFrequency with _$GoalFrequency {
 @freezed
 abstract class GoalProgress with _$GoalProgress {
   const factory GoalProgress({
+    int? goalId,
     @Default(0) int targetCount,
     @Default(0) int doneCount,
     @Default(0.0) double achievementRate,
@@ -84,6 +85,8 @@ abstract class Goal with _$Goal {
     @Default(GoalStatus.unknown)
     GoalStatus status,
     @Default(GoalProgress()) GoalProgress progress,
+    /// #RRGGBB. 서버가 형식을 검증한다.
+    String? color,
     GoalFrequency? frequency,
     int? durationWeeks,
     String? startDate,

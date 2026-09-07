@@ -48,6 +48,8 @@ class MockStore {
   final List<Map<String, dynamic>> _goals = <Map<String, dynamic>>[];
 
   int _nextTodoId = 900;
+  int _nextGoalId = 90;
+  int _aiUsedToday = 0;
   int _accessTokenSeq = 1;
 
   /// tokenExpired 시나리오에서 401 을 한 번만 내기 위한 플래그.
@@ -97,6 +99,8 @@ class MockStore {
     _todosByDate.clear();
     _goals.clear();
     _nextTodoId = 900;
+    _nextGoalId = 90;
+    _aiUsedToday = 0;
     _tokenExpiryFired = false;
   }
 
@@ -130,7 +134,10 @@ class MockStore {
       return _handleTodos(method, segments, query, body);
     }
     if (segments.first == 'goals') {
-      return _handleGoals(method, segments, query);
+      return _handleGoals(method, segments, query, body);
+    }
+    if (segments.first == 'ai') {
+      return _handleAi(method, segments, body);
     }
 
     return _notFound();
@@ -241,6 +248,9 @@ class MockStore {
     if (segments.length == 2 && segments[1] == 'week' && method == 'GET') {
       return _weekSummary(query['start_date'] as String?);
     }
+    if (segments.length == 2 && segments[1] == 'bulk' && method == 'POST') {
+      return _createBulk(body);
+    }
 
     if (segments.length >= 2) {
       final id = int.tryParse(segments[1]);
@@ -250,12 +260,14 @@ class MockStore {
         return MockResult.error(404, 'TODO_NOT_FOUND', '해당 투두를 찾을 수 없습니다.');
       }
       if (segments.length == 2) {
+        if (method == 'GET') return MockResult(200, <String, dynamic>{'data': todo});
         if (method == 'PATCH') return _patchTodo(todo, body);
         if (method == 'DELETE') return _deleteTodo(todo);
       }
       if (segments.length == 3 && method == 'POST') {
         if (segments[2] == 'complete') return _completeTodo(todo, body);
         if (segments[2] == 'uncomplete') return _uncompleteTodo(todo);
+        if (segments[2] == 'postpone') return _postponeTodo(todo, body);
       }
     }
     return _notFound();
@@ -341,6 +353,8 @@ class MockStore {
       'order': (_todosByDate[date]?.length ?? 0) + 1,
       'is_declared': false,
       'source': 'manual',
+      'postpone_count': 0,
+      'memo': input['memo'] as String?,
     };
     (_todosByDate[date] ??= <Map<String, dynamic>>[]).add(todo);
     return MockResult(201, <String, dynamic>{'data': todo});
@@ -367,7 +381,99 @@ class MockStore {
       todo['estimated_minutes'] = input['estimated_minutes'];
     }
     if (input.containsKey('order')) todo['order'] = input['order'];
+    if (input.containsKey('memo')) todo['memo'] = input['memo'];
+    if (input.containsKey('goal_id')) {
+      todo['goal_id'] = input['goal_id'];
+      todo['goal_title'] = _goalTitle(input['goal_id'] as int?);
+    }
+    if (input.containsKey('date')) {
+      _moveTodo(todo, input['date'] as String);
+    }
     return MockResult(200, <String, dynamic>{'data': todo});
+  }
+
+  String _shiftDate(String date, int days) => FixtureLoader.formatDate(
+        FixtureLoader.parseDate(date).add(Duration(days: days)),
+      );
+
+  /// 날짜를 바꾸면 저장 위치도 옮긴다. 그러지 않으면 옛 날짜 목록에 남는다.
+  void _moveTodo(Map<String, dynamic> todo, String toDate) {
+    final from = todo['date'] as String;
+    if (from == toDate) return;
+    _todosByDate[from]?.removeWhere((e) => e['todo_id'] == todo['todo_id']);
+    todo['date'] = toDate;
+    todo['order'] = (_todosByDate[toDate]?.length ?? 0) + 1;
+    (_todosByDate[toDate] ??= <Map<String, dynamic>>[]).add(todo);
+  }
+
+  /// 미루기. to_date 를 안 주면 다음 날로 옮기고 횟수를 올린다.
+  MockResult _postponeTodo(Map<String, dynamic> todo, Object? body) {
+    if (todo['is_declared'] == true) return _declaredLocked();
+    final input =
+        body is Map ? Map<String, dynamic>.from(body) : <String, dynamic>{};
+    final to = (input['to_date'] as String?) ?? _shiftDate(todo['date'] as String, 1);
+    _moveTodo(todo, to);
+    todo['postpone_count'] = ((todo['postpone_count'] as int?) ?? 0) + 1;
+    todo['status'] = 'pending';
+    todo['completed_at'] = null;
+    return MockResult(200, <String, dynamic>{'data': todo});
+  }
+
+  /// AI 초안 확정 저장. 서버와 같이 하나라도 실패하면 전부 만들지 않는다.
+  MockResult _createBulk(Object? body) {
+    final input =
+        body is Map ? Map<String, dynamic>.from(body) : <String, dynamic>{};
+    final raw = input['items'];
+    if (raw is! List || raw.isEmpty) {
+      return MockResult.error(
+        400,
+        'VALIDATION_ERROR',
+        '입력값을 확인해 주세요.',
+        details: <String, dynamic>{'items': '저장할 할 일을 하나 이상 넣으세요.'},
+      );
+    }
+    final items = raw.whereType<Map>().map(Map<String, dynamic>.from).toList();
+    for (final item in items) {
+      if (((item['title'] as String?)?.trim() ?? '').isEmpty) {
+        return MockResult.error(
+          400,
+          'VALIDATION_ERROR',
+          '입력값을 확인해 주세요.',
+          details: <String, dynamic>{'title': '할 일 이름을 입력하세요.'},
+        );
+      }
+    }
+
+    final source = (input['source'] as String?) ?? 'ai_suggested';
+    final created = <Map<String, dynamic>>[];
+    for (final item in items) {
+      final date = (item['date'] as String?) ?? _today;
+      final goalId = item['goal_id'] as int?;
+      final todo = <String, dynamic>{
+        'todo_id': _nextTodoId++,
+        'goal_id': goalId,
+        'goal_title': _goalTitle(goalId),
+        'title': (item['title'] as String).trim(),
+        'date': date,
+        'status': 'pending',
+        'estimated_minutes': item['estimated_minutes'] as int?,
+        'actual_minutes': null,
+        'completed_at': null,
+        'order': (_todosByDate[date]?.length ?? 0) + 1,
+        'is_declared': false,
+        'source': source,
+        'postpone_count': 0,
+        'memo': item['memo'] as String?,
+      };
+      (_todosByDate[date] ??= <Map<String, dynamic>>[]).add(todo);
+      created.add(todo);
+    }
+    return MockResult(201, <String, dynamic>{
+      'data': <String, dynamic>{
+        'items': created,
+        'created_count': created.length,
+      },
+    });
   }
 
   MockResult _deleteTodo(Map<String, dynamic> todo) {
@@ -409,14 +515,219 @@ class MockStore {
     String method,
     List<String> segments,
     Map<String, dynamic> query,
+    Object? body,
   ) {
-    if (segments.length != 1 || method != 'GET') return _notFound();
-    final status = query['status'] as String?;
-    final goals = status == null
-        ? _goals
-        : _goals.where((g) => g['status'] == status).toList();
-    return MockResult(200, <String, dynamic>{'data': goals});
+    if (segments.length == 1) {
+      if (method == 'GET') {
+        final status = query['status'] as String?;
+        final goals = status == null
+            ? _goals
+            : _goals.where((g) => g['status'] == status).toList();
+        // 커서는 흉내내지 않는다. 첫 페이지에 전부 담아 준다.
+        return MockResult(200, <String, dynamic>{
+          'data': goals,
+          'page': <String, dynamic>{'next_cursor': null, 'has_next': false},
+        });
+      }
+      if (method == 'POST') return _createGoal(body);
+      return _notFound();
+    }
+
+    final id = int.tryParse(segments[1]);
+    if (id == null) return _notFound();
+    final goal = _findGoal(id);
+    if (goal == null) {
+      return MockResult.error(404, 'GOAL_NOT_FOUND', '해당 목표를 찾을 수 없습니다.');
+    }
+
+    if (segments.length == 2) {
+      if (method == 'GET') {
+        return MockResult(200, <String, dynamic>{'data': goal});
+      }
+      if (method == 'PATCH') return _patchGoal(goal, body);
+      if (method == 'DELETE') return _deleteGoal(id);
+    }
+    if (segments.length == 3 && segments[2] == 'archive' && method == 'POST') {
+      goal['status'] = 'archived';
+      return MockResult(200, <String, dynamic>{'data': goal});
+    }
+    return _notFound();
   }
+
+  Map<String, dynamic>? _findGoal(int id) {
+    for (final goal in _goals) {
+      if (goal['goal_id'] == id) return goal;
+    }
+    return null;
+  }
+
+  /// 서버와 같이 연결된 투두는 지우지 않고 goal_id 만 끊는다.
+  MockResult _deleteGoal(int id) {
+    _goals.removeWhere((g) => g['goal_id'] == id);
+    for (final items in _todosByDate.values) {
+      for (final todo in items) {
+        if (todo['goal_id'] == id) {
+          todo['goal_id'] = null;
+          todo['goal_title'] = null;
+        }
+      }
+    }
+    return const MockResult(204);
+  }
+
+  MockResult _createGoal(Object? body) {
+    final input =
+        body is Map ? Map<String, dynamic>.from(body) : <String, dynamic>{};
+    final title = (input['title'] as String?)?.trim() ?? '';
+    if (title.isEmpty) {
+      return MockResult.error(
+        400,
+        'VALIDATION_ERROR',
+        '입력값을 확인해 주세요.',
+        details: <String, dynamic>{'title': '목표 이름을 입력하세요.'},
+      );
+    }
+
+    final type = (input['type'] as String?) ?? 'single';
+    final frequency = input['frequency'];
+    if (type == 'recurring' && frequency is! Map) {
+      return MockResult.error(
+        400,
+        'VALIDATION_ERROR',
+        '입력값을 확인해 주세요.',
+        details: <String, dynamic>{'frequency': '반복 목표는 빈도가 필요해요.'},
+      );
+    }
+
+    final start = (input['start_date'] as String?) ?? _today;
+    final weeks = input['duration_weeks'] as int?;
+    final goal = <String, dynamic>{
+      'goal_id': _nextGoalId++,
+      'title': title,
+      'type': type,
+      'status': 'active',
+      'color': input['color'] as String?,
+      'frequency': type == 'recurring'
+          ? Map<String, dynamic>.from(frequency! as Map)
+          : null,
+      'duration_weeks': type == 'recurring' ? weeks : null,
+      'start_date': start,
+      // 서버와 같은 계산: start + weeks*7 - 1
+      'end_date': weeks == null ? null : _shiftDate(start, weeks * 7 - 1),
+      'estimated_minutes': input['estimated_minutes'] as int?,
+      'created_at': '${_today}T${_nowClock()}+09:00',
+    };
+    _goals.add(goal);
+    goal['progress'] = _goalProgress(goal['goal_id'] as int);
+    return MockResult(201, <String, dynamic>{'data': goal});
+  }
+
+  MockResult _patchGoal(Map<String, dynamic> goal, Object? body) {
+    final input =
+        body is Map ? Map<String, dynamic>.from(body) : <String, dynamic>{};
+    if (input.containsKey('title')) {
+      final title = (input['title'] as String?)?.trim() ?? '';
+      if (title.isEmpty) {
+        return MockResult.error(
+          400,
+          'VALIDATION_ERROR',
+          '입력값을 확인해 주세요.',
+          details: <String, dynamic>{'title': '목표 이름을 입력하세요.'},
+        );
+      }
+      goal['title'] = title;
+    }
+    // type · frequency · start_date 는 서버가 받지 않는다. 여기서도 무시한다.
+    if (input.containsKey('color')) goal['color'] = input['color'];
+    if (input.containsKey('estimated_minutes')) {
+      goal['estimated_minutes'] = input['estimated_minutes'];
+    }
+    if (input.containsKey('duration_weeks')) {
+      final weeks = input['duration_weeks'] as int?;
+      goal['duration_weeks'] = weeks;
+      goal['end_date'] = weeks == null
+          ? null
+          : _shiftDate(goal['start_date'] as String, weeks * 7 - 1);
+    }
+    if (input.containsKey('status')) goal['status'] = input['status'];
+    return MockResult(200, <String, dynamic>{'data': goal});
+  }
+
+  // -------------------------------------------------------------------- ai
+
+  static const int _aiLimitPerDay = 30;
+
+  /// 초안 분리 기준. 쉼표, 줄바꿈, "그리고".
+  static final RegExp _draftSplitter = RegExp(r'[,\n]|그리고');
+
+  /// 서버의 3단계 폴백을 흉내내지 않는다. LLM 이 없으니 늘 규칙 파서 수준이다.
+  /// 문장을 쉼표·줄바꿈·"그리고" 로 잘라 초안을 만든다. 응답 형태만 서버와 같다.
+  MockResult _handleAi(String method, List<String> segments, Object? body) {
+    if (segments.length != 2) return _notFound();
+
+    if (segments[1] == 'quota' && method == 'GET') {
+      return MockResult(200, <String, dynamic>{'data': _quota()});
+    }
+    if (segments[1] != 'parse' || method != 'POST') return _notFound();
+
+    final input =
+        body is Map ? Map<String, dynamic>.from(body) : <String, dynamic>{};
+    final text = (input['text'] as String?)?.trim() ?? '';
+    if (text.isEmpty) {
+      return MockResult.error(
+        400,
+        'VALIDATION_ERROR',
+        '입력값을 확인해 주세요.',
+        details: <String, dynamic>{'text': '무엇을 할지 말해 주세요.'},
+      );
+    }
+    if (_aiUsedToday >= _aiLimitPerDay) {
+      return MockResult.error(
+        429,
+        'AI_QUOTA_EXCEEDED',
+        'AI 요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.',
+      );
+    }
+    _aiUsedToday++;
+
+    final date = (input['reference_date'] as String?) ?? _today;
+    final pieces = text
+        .split(_draftSplitter)
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    final drafts = <Map<String, dynamic>>[];
+    for (var i = 0; i < pieces.length; i++) {
+      drafts.add(<String, dynamic>{
+        'draft_id': 'd${i + 1}',
+        'title': pieces[i],
+        'date': date,
+        'time_hint': null,
+        'goal_id': null,
+        'goal_title': null,
+        'estimated_minutes': null,
+        'confidence': 0.5,
+      });
+    }
+
+    return MockResult(200, <String, dynamic>{
+      'data': <String, dynamic>{
+        'parse_id': 'prs_mock${_aiUsedToday.toString().padLeft(2, '0')}',
+        'parse_method': 'rules',
+        'drafts': drafts,
+        'warnings': const <String>[],
+        'quota': _quota(),
+      },
+    });
+  }
+
+  Map<String, dynamic> _quota() => <String, dynamic>{
+        'limit_per_day': _aiLimitPerDay,
+        'used_today': _aiUsedToday,
+        'remaining_today': _aiLimitPerDay - _aiUsedToday,
+        'reset_at': '${_shiftDate(_today, 1)}T04:00:00+09:00',
+      };
 
   // ------------------------------------------------------------------ 계산
 

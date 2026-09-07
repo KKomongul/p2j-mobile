@@ -54,9 +54,12 @@ class DayTodosController extends _$DayTodosController {
 
     try {
       if (willComplete) {
-        final updated = await ref.read(todoRepositoryProvider).complete(
+        // 응답에 목표 진행률(goal_progress)과 연속 기록(personal_streak)도 함께 온다.
+        // 이 화면은 아직 쓰지 않지만, 목표 카드를 붙일 때 여기서 꺼내 쓰면 된다.
+        final updated = (await ref.read(todoRepositoryProvider).complete(
               todo.todoId,
-            );
+            ))
+            .todo;
         final current = state.value;
         if (current == null) return;
         state = AsyncData(
@@ -87,6 +90,30 @@ class DayTodosController extends _$DayTodosController {
     if (snapshot == null) return;
     state = AsyncData(_recount(snapshot, [...snapshot.items, created]));
     _syncWeek();
+  }
+
+  /// AI 초안을 한 번에 저장한다. 서버가 전부 만들거나 전부 만들지 않는다.
+  ///
+  /// AI 가 다른 날짜로 잡은 초안도 함께 저장되므로, 이 목록에는 보고 있는
+  /// 날짜의 것만 넣는다. 나머지는 주간 스트립을 다시 불러 반영한다.
+  Future<int> addMany(
+    List<TodoDraftInput> items, {
+    String? parseId,
+  }) async {
+    final result = await ref.read(todoRepositoryProvider).createBulk(
+          items: items,
+          parseId: parseId,
+        );
+    final snapshot = state.value;
+    if (snapshot != null) {
+      final forThisDay =
+          result.items.where((todo) => todo.date == date).toList();
+      state = AsyncData(
+        _recount(snapshot, [...snapshot.items, ...forThisDay]),
+      );
+    }
+    _syncWeek();
+    return result.createdCount;
   }
 
   Future<void> remove(Todo todo) async {
