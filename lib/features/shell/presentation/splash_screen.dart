@@ -27,7 +27,7 @@ class SplashScreen extends ConsumerWidget {
         statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.espresso,
+        backgroundColor: AppColors.navy,
         body: SafeArea(
           child: auth.hasError ? _error(ref, auth.error!) : const _Loading(),
         ),
@@ -52,7 +52,7 @@ class SplashScreen extends ConsumerWidget {
             child: Text(
               '다른 계정으로 로그인',
               style: AppTypography.caption.copyWith(
-                color: AppColors.onEspressoMuted,
+                color: AppColors.onNavyMuted,
               ),
             ),
           ),
@@ -111,7 +111,7 @@ class _LoadingState extends State<_Loading>
           Text(
             '오늘 할 일을 불러오는 중',
             style: AppTypography.body.copyWith(
-              color: AppColors.onEspressoMuted,
+              color: AppColors.onNavyMuted,
             ),
           ),
         ],

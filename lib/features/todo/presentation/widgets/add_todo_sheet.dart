@@ -9,12 +9,24 @@ import '../../../../core/widgets/app_text_field.dart';
 import '../voice_input_controller.dart';
 import 'mic_button.dart';
 
-/// 수동 추가 결과.
-class NewTodoInput {
-  const NewTodoInput({required this.title, this.estimatedMinutes});
+/// 추가 시트가 돌려주는 것.
+sealed class AddTodoResult {
+  const AddTodoResult();
+}
+
+/// 직접 적은 할 일 한 건. AI 를 거치지 않는 빠져나갈 길이다.
+class ManualTodo extends AddTodoResult {
+  const ManualTodo({required this.title, this.estimatedMinutes});
 
   final String title;
   final int? estimatedMinutes;
+}
+
+/// 말한 문장 그대로. 여러 할 일로 쪼개는 건 서버 `/ai/parse` 가 한다.
+class SpokenSentence extends AddTodoResult {
+  const SpokenSentence(this.text);
+
+  final String text;
 }
 
 /// 할 일 추가 바텀시트.
@@ -22,11 +34,14 @@ class NewTodoInput {
 /// 말하는 게 기본이다. 이 앱은 계획 세우는 일을 대신해 주는 앱이라,
 /// 사용자가 문장을 다듬어 입력할 필요가 없어야 한다. 타이핑은 빠져나갈
 /// 길로만 둔다.
+///
+/// 말이 끝나면 바로 보내지 않고 받아 적은 문장을 한 번 보여 준다.
+/// 잘못 들었을 때 되돌릴 길이 없으면 음성 입력을 안 쓰게 된다.
 class AddTodoSheet extends StatefulWidget {
   const AddTodoSheet({super.key});
 
-  static Future<NewTodoInput?> show(BuildContext context) {
-    return showModalBottomSheet<NewTodoInput>(
+  static Future<AddTodoResult?> show(BuildContext context) {
+    return showModalBottomSheet<AddTodoResult>(
       context: context,
       isScrollControlled: true,
       builder: (context) => const AddTodoSheet(),
@@ -37,13 +52,28 @@ class AddTodoSheet extends StatefulWidget {
   State<AddTodoSheet> createState() => _AddTodoSheetState();
 }
 
+enum _Mode {
+  /// 마이크 대기·듣는 중.
+  voice,
+
+  /// 받아 적은 문장 확인.
+  confirm,
+
+  /// 말하듯 문장으로 적기. 마이크를 못 쓰는 사람도 AI 정리를 쓸 수 있어야 한다.
+  dictate,
+
+  /// 직접 한 건 적기.
+  typing,
+}
+
 class _AddTodoSheetState extends State<AddTodoSheet> {
   final _voice = VoiceInputController();
   final _titleController = TextEditingController();
   final _minutesController = TextEditingController();
+  final _sentenceController = TextEditingController();
 
-  /// 타이핑으로 넘어왔는지. 한 번 넘어오면 되돌아가지 않는다.
-  bool _typing = false;
+  _Mode _mode = _Mode.voice;
+  String _heard = '';
   String? _titleError;
 
   @override
@@ -59,16 +89,17 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
       ..dispose();
     _titleController.dispose();
     _minutesController.dispose();
+    _sentenceController.dispose();
     super.dispose();
   }
 
   void _onVoiceChanged() {
     if (!mounted) return;
-    // 말이 끝나면 받아 적은 문장을 그대로 들고 타이핑 화면으로 넘긴다.
-    // 고칠 게 있으면 고치고 없으면 바로 추가하면 된다.
-    if (_voice.status == VoiceStatus.done && !_typing) {
-      _titleController.text = _voice.text;
-      setState(() => _typing = true);
+    if (_voice.status == VoiceStatus.done && _mode == _Mode.voice) {
+      setState(() {
+        _heard = _voice.text.trim();
+        _mode = _Mode.confirm;
+      });
       return;
     }
     setState(() {});
@@ -82,14 +113,14 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
     }
   }
 
-  void _submit() {
+  void _submitManual() {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       setState(() => _titleError = '무엇을 할지 알려주세요.');
       return;
     }
     Navigator.of(context).pop(
-      NewTodoInput(
+      ManualTodo(
         title: title,
         estimatedMinutes: int.tryParse(_minutesController.text.trim()),
       ),
@@ -105,7 +136,12 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
         top: AppSpacing.s8,
         bottom: MediaQuery.viewInsetsOf(context).bottom + AppSpacing.s24,
       ),
-      child: _typing ? _typingView() : _voiceView(),
+      child: switch (_mode) {
+        _Mode.voice => _voiceView(),
+        _Mode.confirm => _confirmView(),
+        _Mode.dictate => _dictateView(),
+        _Mode.typing => _typingView(),
+      },
     );
   }
 
@@ -131,7 +167,7 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
               ? _voice.text.isEmpty
                   ? '편하게 말씀하세요'
                   : _voice.text
-              : '"내일까지 발표 자료 만들어야 해" 처럼 편하게요',
+              : '"내일 발표 자료 만들고 저녁에 운동" 처럼 한 번에요',
           textAlign: TextAlign.center,
           style: AppTypography.caption.copyWith(
             color: listening && _voice.text.isNotEmpty
@@ -145,13 +181,116 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
           Text(
             _voice.errorMessage ?? '마이크를 쓸 수 없어요.',
             textAlign: TextAlign.center,
-            style: AppTypography.caption.copyWith(color: AppColors.danger),
+            style: AppTypography.caption.copyWith(color: AppColors.coral),
           ),
           const SizedBox(height: AppSpacing.s12),
         ],
-        TextButton(
-          onPressed: () => setState(() => _typing = true),
-          child: const Text('직접 쓸게요'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
+              onPressed: () => setState(() => _mode = _Mode.dictate),
+              child: const Text('글로 적을게요'),
+            ),
+            Text(
+              '·',
+              style: AppTypography.caption.copyWith(color: AppColors.disabled),
+            ),
+            TextButton(
+              onPressed: () => setState(() => _mode = _Mode.typing),
+              child: const Text('한 개만 직접'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// 말하듯 문장으로 적는 화면. 보내는 곳은 음성과 같다.
+  Widget _dictateView() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('무엇을 할지 편하게 적어 주세요', style: AppTypography.titleM),
+        const SizedBox(height: AppSpacing.s8),
+        Text(
+          '여러 개를 한 문장에 적어도 알아서 나눠 드려요.',
+          style: AppTypography.caption.copyWith(color: AppColors.muted),
+        ),
+        const SizedBox(height: AppSpacing.s16),
+        TextField(
+          controller: _sentenceController,
+          autofocus: true,
+          maxLines: 3,
+          minLines: 2,
+          textInputAction: TextInputAction.newline,
+          style: AppTypography.body,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            hintText: '내일 발표 자료 만들고 저녁에 운동 한 시간',
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s20),
+        FilledButton(
+          onPressed: _sentenceController.text.trim().isEmpty
+              ? null
+              : () => Navigator.of(context)
+                  .pop(SpokenSentence(_sentenceController.text.trim())),
+          child: const Text('정리해 주세요'),
+        ),
+        Center(
+          child: TextButton(
+            onPressed: () => setState(() => _mode = _Mode.voice),
+            child: const Text('말로 할게요'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 받아 적은 문장 확인. 여기서 AI 로 보낼지, 손으로 고칠지 고른다.
+  Widget _confirmView() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('이렇게 들었어요', style: AppTypography.titleM),
+        const SizedBox(height: AppSpacing.s12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: AppColors.fill,
+            borderRadius: BorderRadius.circular(AppRadius.r8),
+          ),
+          child: Text(_heard, style: AppTypography.body),
+        ),
+        const SizedBox(height: AppSpacing.s20),
+        FilledButton(
+          onPressed: () =>
+              Navigator.of(context).pop(SpokenSentence(_heard)),
+          child: const Text('정리해 주세요'),
+        ),
+        const SizedBox(height: AppSpacing.s4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
+              onPressed: () {
+                _titleController.text = _heard;
+                setState(() => _mode = _Mode.typing);
+              },
+              child: const Text('직접 고칠게요'),
+            ),
+            Text('·', style: AppTypography.caption.copyWith(
+              color: AppColors.disabled,
+            )),
+            TextButton(
+              onPressed: () => setState(() => _mode = _Mode.voice),
+              child: const Text('다시 말할게요'),
+            ),
+          ],
         ),
       ],
     );
@@ -181,7 +320,7 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
             FilteringTextInputFormatter.digitsOnly,
           ],
           textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _submit(),
+          onSubmitted: (_) => _submitManual(),
         ),
         const SizedBox(height: AppSpacing.s8),
         Text(
@@ -189,7 +328,7 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
           style: AppTypography.caption.copyWith(color: AppColors.muted),
         ),
         const SizedBox(height: AppSpacing.s24),
-        FilledButton(onPressed: _submit, child: const Text('추가')),
+        FilledButton(onPressed: _submitManual, child: const Text('추가')),
       ],
     );
   }

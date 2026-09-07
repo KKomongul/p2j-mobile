@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/status_chip.dart';
 import '../../data/todo_models.dart';
 
 /// 투두 한 줄.
 ///
-/// 카드가 아니라 흰 배경 위 divider 행이다. 히어로 블록과 위계를 다르게 하려고
-/// 라운드를 주지 않았다.
+/// 카드가 아니라 평면 위 divider 행이다. 여기는 장식을 넣지 않는다.
+/// 목록은 훑는 곳이라 라운드·그림자·일러스트가 있으면 읽는 속도가 떨어진다.
+/// 상태는 색이 아니라 칩의 글자로 먼저 읽히게 한다.
 class TodoTile extends StatelessWidget {
   const TodoTile({
     required this.todo,
@@ -59,7 +61,7 @@ class TodoTile extends StatelessWidget {
                       ),
                       if (_badgeLabel != null) ...[
                         const SizedBox(width: AppSpacing.s8),
-                        _StatusBadge(label: _badgeLabel!),
+                        StatusChip(label: _badgeLabel!, tone: _badgeTone),
                       ],
                     ],
                   ),
@@ -77,10 +79,10 @@ class TodoTile extends StatelessWidget {
             ),
             if (todo.isDeclared) ...[
               const SizedBox(width: AppSpacing.s8),
-              const Icon(
-                Icons.lock_outline_rounded,
-                size: 18,
-                color: AppColors.muted,
+              const StatusChip(
+                label: '선언',
+                tone: ChipTone.active,
+                icon: Icons.lock_outline_rounded,
               ),
             ],
           ],
@@ -95,6 +97,13 @@ class TodoTile extends StatelessWidget {
     if (todo.status == TodoStatus.unknown) return todo.rawStatus;
     return todo.status.badgeLabel;
   }
+
+  /// 미룸은 되돌릴 수 있는 경고, 모르는 값은 중립으로 둔다.
+  ChipTone get _badgeTone => switch (todo.status) {
+        TodoStatus.deferred => ChipTone.warn,
+        TodoStatus.skipped => ChipTone.neutral,
+        _ => ChipTone.neutral,
+      };
 
   String get _subtitle {
     final parts = <String>[
@@ -128,7 +137,7 @@ class _Checkbox extends StatelessWidget {
         height: 24,
         margin: const EdgeInsets.only(top: 2),
         decoration: BoxDecoration(
-          color: done ? AppColors.accent : AppColors.surface,
+          color: done ? AppColors.mintInk : AppColors.surface,
           shape: BoxShape.circle,
           border: done
               ? null
@@ -142,30 +151,6 @@ class _Checkbox extends StatelessWidget {
         child: done
             ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
             : null,
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s8,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.fill,
-        borderRadius: BorderRadius.circular(AppRadius.r8),
-      ),
-      child: Text(
-        label,
-        style: AppTypography.label.copyWith(color: AppColors.muted),
       ),
     );
   }

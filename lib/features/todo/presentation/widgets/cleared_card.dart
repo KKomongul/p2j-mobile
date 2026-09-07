@@ -26,8 +26,8 @@ class ClearedCard extends StatelessWidget {
         vertical: AppSpacing.s16,
       ),
       decoration: BoxDecoration(
-        color: AppColors.accentSurface,
-        borderRadius: BorderRadius.circular(AppRadius.r20),
+        color: AppColors.mintSurface,
+        borderRadius: BorderRadius.circular(AppRadius.r16),
       ),
       child: Row(
         children: [

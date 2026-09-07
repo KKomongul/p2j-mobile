@@ -27,6 +27,12 @@ abstract interface class AuthRepository {
   Future<void> logout();
 
   Future<bool> hasStoredSession();
+
+  /// 서버를 부르지 않고 로컬 토큰만 지운다.
+  ///
+  /// 이미 401 을 받아 세션이 죽은 게 확인된 상황에서 쓴다.
+  /// logout() 은 서버에 refresh 무효화를 요청하는데, 그 토큰이 이미 거절당한 뒤라 의미가 없다.
+  Future<void> clearSession();
 }
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -79,6 +85,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<bool> hasStoredSession() => _tokenStorage.hasSession();
+
+  @override
+  Future<void> clearSession() => _tokenStorage.clear();
 
   Future<void> _store(AuthSession session) => _tokenStorage.save(
         accessToken: session.accessToken,

@@ -8,7 +8,7 @@ class ProgressBar extends StatelessWidget {
     required this.value,
     this.height = 8,
     this.trackColor = AppColors.fill,
-    this.fillColor = AppColors.accent,
+    this.fillColor = AppColors.purple,
     super.key,
   });
 

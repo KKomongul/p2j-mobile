@@ -54,10 +54,12 @@ class WeekStrip extends StatelessWidget {
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.line)),
       ),
+      // 좌우를 화면 여백에 맞춘다. 아래 요약 카드와 모서리가 어긋나면
+      // 스트립이 화면 밖으로 새어 나간 것처럼 보인다.
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.s12,
+        AppSpacing.screenH,
         AppSpacing.s8,
-        AppSpacing.s12,
+        AppSpacing.screenH,
         AppSpacing.s12,
       ),
       child: Row(
@@ -96,12 +98,12 @@ class _DayCell extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.r12),
+      borderRadius: BorderRadius.circular(AppRadius.r8),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
         decoration: BoxDecoration(
           color: selected ? AppColors.background : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.r12),
+          borderRadius: BorderRadius.circular(AppRadius.r8),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -131,8 +133,8 @@ class _DayCell extends StatelessWidget {
                           value: value,
                           strokeWidth: 3,
                           strokeCap: StrokeCap.round,
-                          color: AppColors.accent,
-                          backgroundColor: AppColors.line,
+                          color: rate >= 1 ? AppColors.mint : AppColors.amber,
+                          backgroundColor: AppColors.fill,
                         );
                       },
                     ),

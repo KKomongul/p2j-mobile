@@ -17,17 +17,18 @@ abstract final class AppSpacing {
 
 /// P2J 디자인 토큰 — 라운드.
 ///
-/// 위계에 따라 다르게 준다. 모든 요소를 같은 라운드 카드에 넣지 않는다.
+/// 종이를 오려 붙인 느낌이라 모서리를 크게 굴리지 않는다.
+/// 카드는 8dp 이하, pill 은 칩과 태그에만 쓴다.
 abstract final class AppRadius {
-  /// 배지, 체크박스, 작은 칩.
+  /// 체크박스, 작은 배지, 진행률 트랙.
+  static const double r4 = 4;
+
+  /// 기본값. 카드 · 입력칸 · 버튼.
   static const double r8 = 8;
 
-  /// 일반 카드, 입력 필드, 버튼.
-  static const double r12 = 12;
+  /// 바텀시트 상단처럼 화면을 덮는 면.
+  static const double r16 = 16;
 
-  /// 히어로 블록(달성률 카드), 바텀시트.
-  static const double r20 = 20;
-
-  /// 완전한 알약 모양.
+  /// 알약. **상태 칩과 태그 전용.**
   static const double pill = 999;
 }

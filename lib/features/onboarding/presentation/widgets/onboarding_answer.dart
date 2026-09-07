@@ -23,18 +23,18 @@ class OnboardingChoices extends StatelessWidget {
           if (i > 0) const SizedBox(width: AppSpacing.s8),
           Expanded(
             child: Material(
-              color: AppColors.espressoFill,
-              borderRadius: BorderRadius.circular(AppRadius.r12),
+              color: AppColors.navyFill,
+              borderRadius: BorderRadius.circular(AppRadius.r8),
               child: InkWell(
                 onTap: () => onSelected(options[i]),
-                borderRadius: BorderRadius.circular(AppRadius.r12),
+                borderRadius: BorderRadius.circular(AppRadius.r8),
                 child: SizedBox(
                   height: 54,
                   child: Center(
                     child: Text(
                       options[i],
                       style: AppTypography.bodyStrong.copyWith(
-                        color: AppColors.onEspresso,
+                        color: AppColors.onNavy,
                       ),
                     ),
                   ),
@@ -82,8 +82,8 @@ class OnboardingField extends StatelessWidget {
           obscureText: obscureText,
           onSubmitted: (_) => onSubmitted(),
           autofocus: true,
-          cursorColor: AppColors.gold,
-          style: AppTypography.story.copyWith(color: AppColors.onEspresso),
+          cursorColor: AppColors.amber,
+          style: AppTypography.story.copyWith(color: AppColors.onNavy),
           decoration: InputDecoration(
             filled: false,
             isDense: true,
@@ -95,7 +95,7 @@ class OnboardingField extends StatelessWidget {
             focusedBorder: InputBorder.none,
             hintText: hintText,
             hintStyle: AppTypography.story.copyWith(
-              color: AppColors.onEspressoMuted,
+              color: AppColors.onNavyMuted,
             ),
           ),
         ),
@@ -104,7 +104,7 @@ class OnboardingField extends StatelessWidget {
           Text(
             errorText!,
             textAlign: TextAlign.center,
-            style: AppTypography.caption.copyWith(color: AppColors.danger),
+            style: AppTypography.caption.copyWith(color: AppColors.coral),
           ),
         ],
       ],

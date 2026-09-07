@@ -48,17 +48,17 @@ class ErrorView extends StatelessWidget {
               width: 56,
               height: 56,
               decoration: const BoxDecoration(
-                color: AppColors.dangerSurface,
+                color: AppColors.coralSurface,
                 shape: BoxShape.circle,
               ),
-              child: Icon(_icon, color: AppColors.danger, size: 26),
+              child: Icon(_icon, color: AppColors.coral, size: 26),
             ),
             const SizedBox(height: AppSpacing.s20),
             Text(
               _message,
               textAlign: TextAlign.center,
               style: AppTypography.body.copyWith(
-                color: onDark ? AppColors.onEspresso : AppColors.ink,
+                color: onDark ? AppColors.onNavy : AppColors.ink,
               ),
             ),
             if (onRetry != null) ...[
@@ -69,8 +69,8 @@ class ErrorView extends StatelessWidget {
                   onPressed: onRetry,
                   style: onDark
                       ? OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.onEspresso,
-                          backgroundColor: AppColors.espressoFill,
+                          foregroundColor: AppColors.onNavy,
+                          backgroundColor: AppColors.navyFill,
                         )
                       : null,
                   child: const Text('다시 시도'),

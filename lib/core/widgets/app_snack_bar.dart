@@ -16,7 +16,7 @@ abstract final class AppSnackBar {
       ..showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: AppColors.danger,
+          backgroundColor: AppColors.coral,
         ),
       );
   }

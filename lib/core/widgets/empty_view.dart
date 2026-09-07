@@ -42,10 +42,10 @@ class EmptyView extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: AppColors.accentSurface,
-                  borderRadius: BorderRadius.circular(AppRadius.r20),
+                  color: AppColors.purpleSurface,
+                  borderRadius: BorderRadius.circular(AppRadius.r16),
                 ),
-                child: Icon(icon, color: AppColors.accent, size: 30),
+                child: Icon(icon, color: AppColors.purple, size: 30),
               ),
             const SizedBox(height: AppSpacing.s16),
             Text(title, style: AppTypography.titleM, textAlign: TextAlign.center),

@@ -10,6 +10,7 @@ import '../../../core/widgets/loading_view.dart';
 import '../../auth/presentation/auth_controller.dart';
 import 'todo_provider.dart';
 import 'widgets/add_todo_sheet.dart';
+import 'widgets/ai_draft_sheet.dart';
 import 'widgets/day_todo_list.dart';
 import 'widgets/week_strip.dart';
 
@@ -72,19 +73,63 @@ class HomeScreen extends ConsumerWidget {
     return DateFormat('M월 d일 (E)', 'ko_KR').format(parsed);
   }
 
+  /// 추가 흐름.
+  ///
+  /// 말한 문장은 곧바로 저장하지 않고 `/ai/parse` 로 보내 여러 할 일로 쪼갠 뒤
+  /// 사용자 확인을 받는다. 직접 적은 것은 AI 를 거치지 않고 한 건 그대로 만든다.
   Future<void> _addTodo(
     BuildContext context,
     WidgetRef ref,
     String date,
   ) async {
-    final input = await AddTodoSheet.show(context);
-    if (input == null) return;
+    final result = await AddTodoSheet.show(context);
+    if (result == null || !context.mounted) return;
 
+    switch (result) {
+      case ManualTodo(:final title, :final estimatedMinutes):
+        await _create(context, ref, date, title, estimatedMinutes);
+      case SpokenSentence(:final text):
+        await _createFromSpeech(context, ref, date, text);
+    }
+  }
+
+  Future<void> _create(
+    BuildContext context,
+    WidgetRef ref,
+    String date,
+    String title,
+    int? estimatedMinutes,
+  ) async {
     try {
       await ref.read(dayTodosControllerProvider(date).notifier).add(
-            title: input.title,
-            estimatedMinutes: input.estimatedMinutes,
+            title: title,
+            estimatedMinutes: estimatedMinutes,
           );
+    } on ApiException catch (error) {
+      if (!context.mounted) return;
+      AppSnackBar.error(context, error.message);
+    }
+  }
+
+  Future<void> _createFromSpeech(
+    BuildContext context,
+    WidgetRef ref,
+    String date,
+    String text,
+  ) async {
+    final drafts = await AiDraftSheet.show(
+      context,
+      text: text,
+      referenceDate: date,
+    );
+    if (drafts == null || !context.mounted) return;
+
+    try {
+      final created = await ref
+          .read(dayTodosControllerProvider(date).notifier)
+          .addMany(drafts.items, parseId: drafts.parseId);
+      if (!context.mounted) return;
+      AppSnackBar.show(context, '$created개를 추가했어요.');
     } on ApiException catch (error) {
       if (!context.mounted) return;
       AppSnackBar.error(context, error.message);

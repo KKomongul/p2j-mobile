@@ -11,11 +11,11 @@ import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../data/todo_models.dart';
 import '../todo_provider.dart';
-import 'achievement_hero.dart';
+import 'today_summary_card.dart';
 import 'cleared_card.dart';
 import 'todo_tile.dart';
 
-/// 선택한 날짜의 달성률 블록과 투두 목록.
+/// 선택한 날짜의 진행 요약과 투두 목록.
 ///
 /// 로딩 / 에러 / 빈 상태를 여기서 전부 처리한다.
 class DayTodoList extends ConsumerWidget {
@@ -39,11 +39,11 @@ class DayTodoList extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenH,
-              AppSpacing.s16,
+              AppSpacing.s12,
               AppSpacing.screenH,
-              AppSpacing.s24,
+              AppSpacing.s16,
             ),
-            child: AchievementHero(summary: day.summary),
+            child: TodaySummaryCard(summary: day.summary),
           ),
           if (day.items.isEmpty)
             const Padding(
@@ -101,7 +101,7 @@ class _TodoCard extends ConsumerWidget {
       key: ValueKey<int>(todo.todoId),
       direction: DismissDirection.endToStart,
       background: Container(
-        color: AppColors.danger,
+        color: AppColors.coral,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: AppSpacing.s20),
         child: const Icon(

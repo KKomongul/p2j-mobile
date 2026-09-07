@@ -4,9 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/data/auth_models.dart';
 import '../../features/auth/presentation/auth_controller.dart';
-import '../../features/auth/presentation/login_screen.dart';
 import '../../features/goal/presentation/goal_list_screen.dart';
-import '../../features/onboarding/presentation/onboarding_provider.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/shell/presentation/main_shell.dart';
 import '../../features/shell/presentation/placeholder_screen.dart';
@@ -26,25 +24,17 @@ GoRouter goRouter(Ref ref) {
   final authState =
       ValueNotifier<AsyncValue<User?>>(const AsyncLoading<User?>());
 
-  final onboardingState = ValueNotifier<bool>(false);
-
   ref.listen<AsyncValue<User?>>(
     authControllerProvider,
     (_, next) => authState.value = next,
     fireImmediately: true,
   );
-  ref.listen<bool>(
-    onboardingDoneProvider,
-    (_, next) => onboardingState.value = next,
-    fireImmediately: true,
-  );
 
   final router = GoRouter(
     initialLocation: Routes.splash,
-    refreshListenable: Listenable.merge([authState, onboardingState]),
+    refreshListenable: authState,
     redirect: (context, state) {
       final auth = authState.value;
-      final introDone = onboardingState.value;
       final location = state.matchedLocation;
 
       // 판정 중에는 스플래시를 유지한다.
@@ -59,23 +49,17 @@ GoRouter goRouter(Ref ref) {
       }
 
       final loggedIn = auth.value != null;
-      final onAuthPage = location == Routes.login;
 
       if (loggedIn) {
-        if (onAuthPage ||
-            location == Routes.splash ||
-            location == Routes.onboarding) {
+        if (location == Routes.splash || location == Routes.onboarding) {
           return Routes.home;
         }
         return null;
       }
 
-      // 로그인하지 않았으면 켤 때마다 인트로부터 보여준다.
-      if (!introDone) {
-        return location == Routes.onboarding ? null : Routes.onboarding;
-      }
-
-      return onAuthPage ? null : Routes.login;
+      // 로그인하지 않았으면 언제나 대화 화면이다.
+      // 가입도 로그인도 거기서 끝나므로 다른 인증 경로가 없다.
+      return location == Routes.onboarding ? null : Routes.onboarding;
     },
     routes: [
       GoRoute(
@@ -85,10 +69,6 @@ GoRouter goRouter(Ref ref) {
       GoRoute(
         path: Routes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
-      ),
-      GoRoute(
-        path: Routes.login,
-        builder: (context, state) => const LoginScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -142,7 +122,6 @@ GoRouter goRouter(Ref ref) {
   ref.onDispose(() {
     router.dispose();
     authState.dispose();
-    onboardingState.dispose();
   });
 
   return router;

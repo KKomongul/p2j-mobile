@@ -8,12 +8,20 @@ import '../../data/goal_models.dart';
 
 /// 목표 한 장.
 ///
-/// 히어로 블록과 위계를 다르게 하려고 흰 카드 + 얕은 보더로 둔다.
-/// 그림자는 쓰지 않는다.
+/// 목록은 훑는 곳이라 그림자를 쓰지 않는다. 옅은 채움과 8dp 라운드로만 끊는다.
+/// 목표 색은 제목 앞 점 하나로만 쓴다. 카드 전체를 물들이면 진행률이 안 읽힌다.
 class GoalCard extends StatelessWidget {
   const GoalCard({required this.goal, super.key});
 
   final Goal goal;
+
+  /// 서버가 준 #RRGGBB. 형식이 어긋나면 점을 그리지 않는다.
+  Color? get _dotColor {
+    final hex = goal.color;
+    if (hex == null || hex.length != 7 || !hex.startsWith('#')) return null;
+    final value = int.tryParse(hex.substring(1), radix: 16);
+    return value == null ? null : Color(0xFF000000 | value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,13 +33,24 @@ class GoalCard extends StatelessWidget {
       decoration: BoxDecoration(
         // 배경도 흰색이라 테두리로만 구분하면 약하다. 옅은 채움으로 띄운다.
         color: AppColors.fill,
-        borderRadius: BorderRadius.circular(AppRadius.r20),
+        borderRadius: BorderRadius.circular(AppRadius.r8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              if (_dotColor != null) ...[
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(right: AppSpacing.s8),
+                  decoration: BoxDecoration(
+                    color: _dotColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
               Expanded(child: Text(goal.title, style: AppTypography.titleM)),
               if (goal.status.badgeLabel != null)
                 _Badge(label: goal.status.badgeLabel!),

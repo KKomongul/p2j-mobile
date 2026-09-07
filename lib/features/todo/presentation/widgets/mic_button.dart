@@ -72,11 +72,11 @@ class _MicButtonState extends State<MicButton>
                 width: widget.size,
                 height: widget.size,
                 decoration: BoxDecoration(
-                  color: widget.listening ? AppColors.accent : AppColors.ink,
+                  color: widget.listening ? AppColors.purple : AppColors.ink,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.accent.withValues(
+                      color: AppColors.purple.withValues(
                         alpha: widget.listening ? 0.35 : 0,
                       ),
                       spreadRadius: spread,

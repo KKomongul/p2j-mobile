@@ -31,7 +31,7 @@ class SpeechBubble extends StatelessWidget {
           padding: padding,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(AppRadius.r20),
+            borderRadius: BorderRadius.circular(AppRadius.r16),
           ),
           child: child,
         ),

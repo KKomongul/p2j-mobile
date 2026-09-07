@@ -14,9 +14,9 @@ abstract final class AppTheme {
     brightness: Brightness.light,
     primary: AppColors.ink,
     onPrimary: Colors.white,
-    secondary: AppColors.accent,
+    secondary: AppColors.purple,
     onSecondary: Colors.white,
-    error: AppColors.danger,
+    error: AppColors.coral,
     onError: Colors.white,
     surface: AppColors.surface,
     onSurface: AppColors.ink,
@@ -81,7 +81,7 @@ abstract final class AppTheme {
           textStyle: AppTypography.bodyStrong,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.r12),
+            borderRadius: BorderRadius.circular(AppRadius.r8),
           ),
         ),
       ),
@@ -94,7 +94,7 @@ abstract final class AppTheme {
           textStyle: AppTypography.bodyStrong,
           side: BorderSide.none,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.r12),
+            borderRadius: BorderRadius.circular(AppRadius.r8),
           ),
         ),
       ),
@@ -115,21 +115,21 @@ abstract final class AppTheme {
         ),
         hintStyle: AppTypography.body.copyWith(color: AppColors.disabled),
         labelStyle: AppTypography.label.copyWith(color: AppColors.muted),
-        errorStyle: AppTypography.caption.copyWith(color: AppColors.danger),
+        errorStyle: AppTypography.caption.copyWith(color: AppColors.coral),
         border: _inputBorder(Colors.transparent),
         enabledBorder: _inputBorder(Colors.transparent),
         focusedBorder: _inputBorder(AppColors.ink, width: 1.5),
-        errorBorder: _inputBorder(AppColors.danger),
-        focusedErrorBorder: _inputBorder(AppColors.danger, width: 1.5),
+        errorBorder: _inputBorder(AppColors.coral),
+        focusedErrorBorder: _inputBorder(AppColors.coral, width: 1.5),
       ),
 
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.ink,
         contentTextStyle: AppTypography.caption.copyWith(color: Colors.white),
-        actionTextColor: AppColors.gold,
+        actionTextColor: AppColors.amber,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.r12),
+          borderRadius: BorderRadius.circular(AppRadius.r8),
         ),
       ),
 
@@ -140,7 +140,7 @@ abstract final class AppTheme {
         dragHandleColor: AppColors.line,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppRadius.r20),
+            top: Radius.circular(AppRadius.r16),
           ),
         ),
       ),
@@ -168,7 +168,7 @@ abstract final class AppTheme {
       ),
 
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.accent,
+        color: AppColors.purple,
         linearTrackColor: AppColors.fill,
         circularTrackColor: AppColors.fill,
       ),
@@ -177,24 +177,24 @@ abstract final class AppTheme {
 
   /// 어두운 면 위의 주요 버튼.
   ///
-  /// 기본 주요 버튼은 잉크색인데, 인트로 배경(espresso)과 밝기가 거의 같아서
-  /// 그대로 쓰면 버튼이 배경에 묻힌다. 어두운 면에서는 금색으로 뒤집는다.
-  static ButtonStyle filledOnEspresso() => FilledButton.styleFrom(
-        backgroundColor: AppColors.gold,
-        foregroundColor: AppColors.onGold,
-        disabledBackgroundColor: AppColors.espressoFill,
-        disabledForegroundColor: AppColors.onEspressoMuted,
+  /// 기본 주요 버튼은 네이비인데, 네이비 면 위에서는 그대로 묻힌다.
+  /// 어두운 면에서는 앰버로 뒤집는다.
+  static ButtonStyle filledOnNavy() => FilledButton.styleFrom(
+        backgroundColor: AppColors.amber,
+        foregroundColor: AppColors.onAmber,
+        disabledBackgroundColor: AppColors.navyFill,
+        disabledForegroundColor: AppColors.onNavyMuted,
         minimumSize: const Size.fromHeight(54),
         textStyle: AppTypography.bodyStrong,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.r12),
+          borderRadius: BorderRadius.circular(AppRadius.r8),
         ),
       );
 
   static OutlineInputBorder _inputBorder(Color color, {double width = 1}) {
     return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppRadius.r12),
+      borderRadius: BorderRadius.circular(AppRadius.r8),
       borderSide: BorderSide(color: color, width: width),
     );
   }

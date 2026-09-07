@@ -26,7 +26,16 @@ class AuthController extends _$AuthController {
 
     final repository = ref.watch(authRepositoryProvider);
     if (!await repository.hasStoredSession()) return null;
-    return repository.fetchMe();
+
+    try {
+      return await repository.fetchMe();
+    } on ApiException catch (error) {
+      // 세션이 죽었으면 재시도해도 결과가 같다. 토큰을 지우고 인트로로 보낸다.
+      // 스플래시의 '다시 시도'가 영원히 실패하는 막다른 길이 되지 않게 한다.
+      if (!error.isSessionExpired) rethrow;
+      await repository.clearSession();
+      return null;
+    }
   }
 
   Future<void> login({
