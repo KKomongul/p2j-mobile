@@ -50,6 +50,43 @@ extension TodoStatusX on TodoStatus {
 /// 배지에 원문을 노출해서 조용히 숨기지 않기 위한 것이다.
 String _rawStatus(Object? value) => value?.toString() ?? 'unknown';
 
+/// 이 할 일이 걸려 있는 그룹 하나.
+///
+/// 오늘 화면에서 인증샷을 올릴 때 **어느 선언 항목으로 보낼지**가 여기 들어 있다.
+/// 한 할 일을 두 그룹에 선언했으면 항목이 둘이고, 사진 한 장이 양쪽에 붙는다.
+@freezed
+abstract class TodoDeclarationLink with _$TodoDeclarationLink {
+  const factory TodoDeclarationLink({
+    required int declarationItemId,
+    @Default(0) int groupId,
+    @Default('') String groupName,
+    int? declarationId,
+    String? date,
+    @Default(false) bool hasProof,
+  }) = _TodoDeclarationLink;
+
+  factory TodoDeclarationLink.fromJson(Map<String, dynamic> json) =>
+      _$TodoDeclarationLinkFromJson(json);
+}
+
+/// 할 일에 붙은 인증샷. 오늘 화면은 썸네일만 필요해서 최소한만 받는다.
+/// 댓글·리액션이 달린 전체 객체는 그룹 피드의 `Proof` 다.
+@freezed
+abstract class TodoProof with _$TodoProof {
+  const factory TodoProof({
+    required int postId,
+    @Default('') String fileKey,
+
+    /// 스토리지 버킷이 설정되지 않으면 null. 그때는 자리표시자를 그린다.
+    String? imageUrl,
+    String? caption,
+    DateTime? createdAt,
+  }) = _TodoProof;
+
+  factory TodoProof.fromJson(Map<String, dynamic> json) =>
+      _$TodoProofFromJson(json);
+}
+
 @freezed
 abstract class Todo with _$Todo {
   const factory Todo({
@@ -74,10 +111,30 @@ abstract class Todo with _$Todo {
     @Default(false) bool isDeclared,
     /// 몇 번 미뤘는지. postpone 을 부를 때마다 서버가 올린다.
     @Default(0) int postponeCount,
+
+    /// 선언한 그룹들. 선언하지 않았으면 빈 목록이다.
+    @Default(<TodoDeclarationLink>[]) List<TodoDeclarationLink> declarations,
+    TodoProof? proof,
     String? memo,
   }) = _Todo;
 
   factory Todo.fromJson(Map<String, dynamic> json) => _$TodoFromJson(json);
+}
+extension TodoX on Todo {
+  /// 인증샷을 올릴 수 있는 상태인가.
+  ///
+  /// 끝낸 항목에만 붙일 수 있다 (서버도 409 TODO_NOT_DONE 으로 막는다).
+  /// 이미 올렸으면 더 올릴 게 없다.
+  bool get canAttachProof =>
+      status.isDone && declarations.isNotEmpty && proof == null;
+
+  /// 아직 사진이 안 붙은 선언 항목. 사진 한 장을 여기 전부에 보낸다.
+  List<TodoDeclarationLink> get pendingProofTargets =>
+      declarations.where((d) => !d.hasProof).toList(growable: false);
+
+  /// 선언한 그룹 이름을 사람이 읽는 문장으로. "러닝조 · 개발조"
+  String get declaredGroupLabel =>
+      declarations.map((d) => d.groupName).where((n) => n.isNotEmpty).join(' · ');
 }
 
 @freezed

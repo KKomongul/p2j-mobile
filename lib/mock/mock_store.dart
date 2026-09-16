@@ -285,7 +285,11 @@ class MockStore {
         return MockResult.error(404, 'TODO_NOT_FOUND', '해당 투두를 찾을 수 없습니다.');
       }
       if (segments.length == 2) {
-        if (method == 'GET') return MockResult(200, <String, dynamic>{'data': todo});
+        if (method == 'GET') {
+          return MockResult(200, <String, dynamic>{
+            'data': _social.decorateTodo(todo),
+          });
+        }
         if (method == 'PATCH') return _patchTodo(todo, body);
         if (method == 'DELETE') return _deleteTodo(todo);
       }
@@ -309,8 +313,10 @@ class MockStore {
     return MockResult(200, <String, dynamic>{
       'data': <String, dynamic>{
         'date': date,
-        'items': items,
+        // 선언 링크는 서버가 붙여 주는 값이라 Mock 도 같은 자리에 채운다.
+        'items': items.map(_social.decorateTodo).toList(),
         'summary': _summary(items),
+        'declaration': null,
       },
     });
   }
@@ -382,7 +388,7 @@ class MockStore {
       'memo': input['memo'] as String?,
     };
     (_todosByDate[date] ??= <Map<String, dynamic>>[]).add(todo);
-    return MockResult(201, <String, dynamic>{'data': todo});
+    return MockResult(201, <String, dynamic>{'data': _social.decorateTodo(todo)});
   }
 
   MockResult _patchTodo(Map<String, dynamic> todo, Object? body) {
@@ -414,7 +420,7 @@ class MockStore {
     if (input.containsKey('date')) {
       _moveTodo(todo, input['date'] as String);
     }
-    return MockResult(200, <String, dynamic>{'data': todo});
+    return MockResult(200, <String, dynamic>{'data': _social.decorateTodo(todo)});
   }
 
   String _shiftDate(String date, int days) => FixtureLoader.formatDate(
@@ -441,7 +447,7 @@ class MockStore {
     todo['postpone_count'] = ((todo['postpone_count'] as int?) ?? 0) + 1;
     todo['status'] = 'pending';
     todo['completed_at'] = null;
-    return MockResult(200, <String, dynamic>{'data': todo});
+    return MockResult(200, <String, dynamic>{'data': _social.decorateTodo(todo)});
   }
 
   /// AI 초안 확정 저장. 서버와 같이 하나라도 실패하면 전부 만들지 않는다.
@@ -519,7 +525,7 @@ class MockStore {
 
     return MockResult(200, <String, dynamic>{
       'data': <String, dynamic>{
-        'todo': todo,
+        'todo': _social.decorateTodo(todo),
         'goal_progress': _goalProgress(todo['goal_id'] as int?),
         'personal_streak': _streak(),
       },

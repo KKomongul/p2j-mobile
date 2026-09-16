@@ -30,9 +30,10 @@ dependencies:
   # flutter_localizations 가 intl 버전을 고정하므로 여기서는 따라간다.
   intl: any
 
-  # 통계 화면(11주차)용. 이번 범위에서는 쓰지 않는다.
-  fl_chart: ^0.69.0
   speech_to_text: ^7.4.0
+
+  # 인증샷. 서명 URL 로 스토리지에 직접 올린다 (사진이 서버를 거치지 않는다).
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

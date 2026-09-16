@@ -10,9 +10,12 @@ import '../../../../core/widgets/empty_view.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_view.dart';
 import '../../data/todo_models.dart';
+import '../../../group/presentation/group_provider.dart';
 import '../todo_provider.dart';
 import 'today_summary_card.dart';
 import 'cleared_card.dart';
+import 'attach_proof_sheet.dart';
+import 'goal_swap_sheet.dart';
 import 'todo_tile.dart';
 
 /// 선택한 날짜의 진행 요약과 투두 목록.
@@ -92,6 +95,8 @@ class _TodoCard extends ConsumerWidget {
         context,
         '그룹에 선언한 항목은 오늘 수정할 수 없어요.',
       ),
+      onAttachProof: () => _attachProof(context, ref, todo),
+      onChangeGoal: () => _changeGoal(context, ref, todo),
     );
 
     // 선언한 항목은 삭제가 막힌다. 스와이프 자체를 열어주지 않는다.
@@ -112,6 +117,60 @@ class _TodoCard extends ConsumerWidget {
       onDismissed: (_) => _remove(context, ref, todo),
       child: tile,
     );
+  }
+
+  /// 목표를 갈아끼운다.
+  ///
+  /// 선언한 항목은 서버가 막으므로 시트를 열지 않고 이유만 말한다.
+  /// 시트를 열어 고르게 한 뒤 실패시키면 헛수고를 시키는 셈이다.
+  Future<void> _changeGoal(
+    BuildContext context,
+    WidgetRef ref,
+    Todo todo,
+  ) async {
+    if (todo.isDeclared) {
+      AppSnackBar.show(context, '그룹에 선언한 항목은 목표를 바꿀 수 없어요.');
+      return;
+    }
+
+    final picked = await GoalSwapSheet.show(
+      context,
+      currentGoalId: todo.goalId,
+    );
+    if (picked == null || !context.mounted) return;
+    if (picked.goalId == todo.goalId) return;
+
+    try {
+      await ref
+          .read(dayTodosControllerProvider(date).notifier)
+          .changeGoal(todo, picked.goalId);
+      if (!context.mounted) return;
+      AppSnackBar.show(
+        context,
+        picked.goalId == null ? '목표에서 뺐어요.' : '목표를 바꿨어요.',
+      );
+    } on ApiException catch (error) {
+      if (context.mounted) AppSnackBar.error(context, error.message);
+    }
+  }
+
+  /// 인증샷을 올리고 선언한 그룹 피드로 보낸다.
+  ///
+  /// 올리고 나면 그룹 화면들도 같이 낡는다 — 피드·순위·연속 기록이 한 번에 바뀌므로
+  /// 해당 그룹을 통째로 비운다.
+  Future<void> _attachProof(
+    BuildContext context,
+    WidgetRef ref,
+    Todo todo,
+  ) async {
+    final uploaded = await AttachProofSheet.show(context, todo);
+    if (uploaded != true || !context.mounted) return;
+
+    ref.invalidate(dayTodosControllerProvider(date));
+    for (final target in todo.declarations) {
+      invalidateGroup(ref, target.groupId);
+    }
+    AppSnackBar.show(context, '인증샷을 올렸어요.');
   }
 
   Future<void> _toggle(BuildContext context, WidgetRef ref, Todo todo) async {

@@ -117,6 +117,26 @@ class GroupApi {
     return ApiResponse.list(response, DeclarationRow.fromJson).data;
   }
 
+  // ------------------------------------------------------------------ 업로드
+
+  /// 업로드용 서명 URL. `POST /uploads/presign`
+  ///
+  /// 스토리지 자격증명이 없으면 **503 STORAGE_UNAVAILABLE** 이다.
+  /// 그 경우 인증샷 기능만 막히고 나머지 그룹 기능은 그대로 돈다.
+  Future<PresignResult> presign({
+    String contentType = 'image/jpeg',
+    String purpose = 'proof',
+  }) async {
+    final response = await _client.post(
+      '/uploads/presign',
+      data: <String, dynamic>{
+        'content_type': contentType,
+        'purpose': purpose,
+      },
+    );
+    return ApiResponse.object(response, PresignResult.fromJson).data;
+  }
+
   // ---------------------------------------------------------- 인증 · 피드
 
   /// 인증샷 등록. `POST /groups/{id}/proofs` → 201

@@ -99,6 +99,35 @@ Dio buildDio({
   return dio;
 }
 
+/// 서명 URL 로 파일을 올리는 전용 Dio.
+///
+/// **인증 헤더를 붙이지 않는다.** 서명 URL 자체가 자격증명이고, 남의 스토리지
+/// 호스트에 우리 토큰을 보낼 이유가 없다.
+///
+/// baseUrl 은 남겨 둔다. Mock 이 상대 경로 업로드 URL 을 주기 때문이고,
+/// 실서버가 주는 절대 URL 은 dio 가 baseUrl 을 무시하고 그대로 쓴다.
+Dio buildUploadDio() {
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: AppConfig.baseUrl,
+      connectTimeout: AppConfig.connectTimeout,
+      // 사진은 몇 MB 라 받는 것보다 보내는 데 오래 걸린다.
+      sendTimeout: const Duration(seconds: 60),
+      receiveTimeout: AppConfig.receiveTimeout,
+      validateStatus: (status) =>
+          status != null && status >= 200 && status < 300,
+    ),
+  );
+  if (AppConfig.useMock) {
+    dio.interceptors.add(MockInterceptor(scenario: AppConfig.mockScenario));
+  }
+  dio.interceptors.add(ErrorInterceptor());
+  return dio;
+}
+
+@Riverpod(keepAlive: true)
+Dio uploadDio(Ref ref) => buildUploadDio();
+
 @Riverpod(keepAlive: true)
 TokenStorage tokenStorage(Ref ref) => TokenStorage();
 

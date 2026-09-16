@@ -161,6 +161,7 @@ class MockSocial {
       'posts' => _handlePosts(method, segments, query, body),
       'comments' => _handleComments(method, segments),
       'uploads' => _handleUploads(segments),
+      '_mock' => _handleUpload(method),
       _ => null,
     };
   }
@@ -1264,14 +1265,72 @@ class MockSocial {
 
   // ------------------------------------------------------------------ 업로드
 
-  /// 실서버와 같이 스토리지 자격증명이 없는 상태를 흉내 낸다.
-  /// 인증샷 기능 자체는 file_key 만 있으면 도므로 화면은 끝까지 확인할 수 있다.
+  /// 업로드는 **성공시킨다.** 실서버는 Firebase 자격증명이 없으면 503 이지만,
+  /// Mock 까지 막아 두면 인증샷 흐름을 화면에서 한 번도 못 밟아 본다.
+  ///
+  /// 상대 경로 업로드 URL 을 주는 게 요령이다. 업로드 전용 Dio 의 baseUrl 이
+  /// API 와 같아서 이 인터셉터가 PUT 을 그대로 받아 낸다.
   MockResult _handleUploads(List<String> segments) {
     if (segments.length == 2 && segments[1] == 'presign') {
-      return MockResult.error(
-          503, 'STORAGE_UNAVAILABLE', '사진 업로드가 아직 설정되지 않았어요.');
+      final key = 'proofs/${_today()}/${_nextPostId + 1}.jpg';
+      return MockResult(200, <String, dynamic>{
+        'data': <String, dynamic>{
+          'upload_url': '/_mock/upload/${Uri.encodeComponent(key)}',
+          'file_key': key,
+          'content_type': 'image/jpeg',
+          'expires_at': _iso(_today()),
+        },
+      });
     }
     return MockResult.error(404, 'NOT_FOUND', '요청한 경로를 찾을 수 없어요.');
+  }
+
+  /// 서명 URL 로 들어오는 PUT. 바이트는 버린다 — 흐름만 확인하면 된다.
+  MockResult _handleUpload(String method) => method == 'PUT'
+      ? const MockResult(200)
+      : MockResult.error(404, 'NOT_FOUND', '요청한 경로를 찾을 수 없어요.');
+
+  // -------------------------------------------------------------- 선언 링크
+
+  /// 할 일 하나에 붙은 선언 목록과 인증샷. 서버 `todos.declaration_links()` 와 같다.
+  ///
+  /// 오늘 화면이 인증샷을 **어느 선언 항목으로 보낼지** 알아야 해서 함께 내려준다.
+  Map<String, dynamic> decorateTodo(Map<String, dynamic> todo) {
+    final todoId = todo['todo_id'];
+    final links = <Map<String, dynamic>>[];
+    Map<String, dynamic>? proof;
+
+    for (final declaration in _declarations) {
+      if (declaration['user_id'] != _myId) continue;
+      for (final raw in declaration['items'] as List<dynamic>) {
+        final item = Map<String, dynamic>.from(raw as Map);
+        if (item['todo_id'] != todoId) continue;
+
+        final group = _groups
+            .where((g) => g['group_id'] == declaration['group_id'])
+            .firstOrNull;
+        final found = _proofs
+            .where((p) =>
+                p['declaration_item_id'] == item['declaration_item_id'] &&
+                p['deleted_at'] == null)
+            .firstOrNull;
+        links.add(<String, dynamic>{
+          'group_id': declaration['group_id'],
+          'group_name': group?['name'] ?? '',
+          'declaration_id': declaration['declaration_id'],
+          'declaration_item_id': item['declaration_item_id'],
+          'date': declaration['date'],
+          'has_proof': found != null,
+        });
+        proof ??= found == null ? null : _proofJson(found);
+      }
+    }
+
+    return <String, dynamic>{
+      ...todo,
+      'declarations': links,
+      'proof': proof,
+    };
   }
 
   // -------------------------------------------------------------------- 도구

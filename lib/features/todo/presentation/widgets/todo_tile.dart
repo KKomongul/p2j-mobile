@@ -16,12 +16,20 @@ class TodoTile extends StatelessWidget {
     required this.todo,
     required this.onToggle,
     required this.onLockedTap,
+    required this.onAttachProof,
+    required this.onChangeGoal,
     super.key,
   });
 
   final Todo todo;
   final VoidCallback onToggle;
   final VoidCallback onLockedTap;
+
+  /// 인증샷 올리기. 끝냈고 선언했는데 아직 사진이 없을 때만 불린다.
+  final VoidCallback onAttachProof;
+
+  /// 목표 갈아끼우기. 선언한 항목이면 잠긴 이유를 알린다.
+  final VoidCallback onChangeGoal;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +85,19 @@ class TodoTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (todo.isDeclared) ...[
+            const SizedBox(width: AppSpacing.s4),
+            _GoalButton(todo: todo, onTap: onChangeGoal),
+            if (todo.canAttachProof) ...[
+              const SizedBox(width: AppSpacing.s8),
+              _ProofButton(onTap: onAttachProof),
+            ] else if (todo.proof != null) ...[
+              const SizedBox(width: AppSpacing.s8),
+              const StatusChip(
+                label: '인증',
+                tone: ChipTone.done,
+                icon: Icons.photo_camera_rounded,
+              ),
+            ] else if (todo.isDeclared) ...[
               const SizedBox(width: AppSpacing.s8),
               const StatusChip(
                 label: '선언',
@@ -105,12 +125,108 @@ class TodoTile extends StatelessWidget {
         _ => ChipTone.neutral,
       };
 
+  /// 목표 · 소요시간 · 선언한 그룹.
+  ///
+  /// 어느 그룹에 걸었는지는 여기서만 보인다. 잠긴 이유를 칩 하나로만 알리면
+  /// "왜 못 고치지" 가 되므로 상대를 함께 적는다.
   String get _subtitle {
     final parts = <String>[
       if (todo.goalTitle != null) todo.goalTitle!,
       if (todo.estimatedMinutes != null) '${todo.estimatedMinutes}분',
+      if (todo.declarations.isNotEmpty) todo.declaredGroupLabel,
     ];
     return parts.join(' · ');
+  }
+}
+
+/// 목표를 갈아끼우는 버튼.
+///
+/// 목표는 만들 때가 아니라 **나중에** 정해지는 경우가 많다. 일단 적어 두고
+/// "이건 그 목표에 넣자" 가 되는 흐름이라, 목록에서 바로 바꿀 수 있어야 한다.
+///
+/// 목표 이름은 부제에 이미 있으므로 여기서는 깃발 하나로 상태만 알린다.
+/// 이름까지 또 적으면 한 줄에 같은 말이 두 번 나온다.
+class _GoalButton extends StatelessWidget {
+  const _GoalButton({required this.todo, required this.onTap});
+
+  final Todo todo;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final linked = todo.goalId != null;
+    // 선언한 항목은 서버가 목표 변경을 막는다. 흐리게 두되 눌리기는 한다 —
+    // 왜 안 되는지 말해 주려면 탭을 받아야 한다.
+    final locked = todo.isDeclared;
+
+    return Tooltip(
+      message: linked ? '목표 바꾸기' : '목표에 넣기',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: linked ? AppColors.purpleSurface : Colors.transparent,
+            shape: BoxShape.circle,
+            border: linked
+                ? null
+                : Border.all(color: AppColors.line, width: 1.2),
+          ),
+          child: Icon(
+            linked ? Icons.flag_rounded : Icons.outlined_flag_rounded,
+            size: 16,
+            color: locked
+                ? AppColors.disabled
+                : linked
+                    ? AppColors.purple
+                    : AppColors.muted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 인증샷을 부르는 버튼. 끝낸 직후에만 나타난다.
+///
+/// 칩이 아니라 누를 수 있는 것이라 배경을 채우고 48dp 높이를 지킨다.
+class _ProofButton extends StatelessWidget {
+  const _ProofButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.amberSurface,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.photo_camera_rounded,
+              size: 14,
+              color: AppColors.amberInk,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '인증샷',
+              style: AppTypography.label.copyWith(color: AppColors.amberInk),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

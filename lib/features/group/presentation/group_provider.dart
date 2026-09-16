@@ -65,17 +65,28 @@ Future<List<PostComment>> postComments(Ref ref, int postId) async {
   return page.items;
 }
 
-/// 그룹 화면 전체를 다시 읽는다. 선언·인증처럼 여러 화면에 걸친 변화 뒤에 부른다.
+/// 그룹 화면 전체를 다시 읽는다. 선언·완료·인증처럼 여러 화면에 걸친 변화 뒤에 부른다.
 ///
 /// 선언 하나가 오늘 현황·피드·순위·연속 기록을 동시에 바꾼다. 화면마다 따로
-/// 무효화하면 하나씩 빠뜨리게 되므로 한 함수로 모은다.
-void invalidateGroup(WidgetRef ref, int groupId) {
-  ref
-    ..invalidate(groupDetailProvider(groupId))
-    ..invalidate(groupMembersProvider(groupId))
-    ..invalidate(groupDeclarationsProvider(groupId))
-    ..invalidate(groupFeedProvider(groupId))
-    ..invalidate(groupRankingProvider(groupId))
-    ..invalidate(groupStreakProvider(groupId))
-    ..invalidate(myGroupsProvider);
+/// 무효화하면 하나씩 빠뜨리게 되므로 한 곳에 모은다.
+///
+/// 위젯에서는 [invalidateGroup], Notifier 안에서는 [invalidateGroupFrom] 을 쓴다.
+/// `WidgetRef` 와 `Ref` 는 공통 상위 타입이 없어서 얇은 껍데기를 하나 더 둔다.
+void _invalidateGroupWith(
+  void Function(ProviderOrFamily provider) invalidate,
+  int groupId,
+) {
+  invalidate(groupDetailProvider(groupId));
+  invalidate(groupMembersProvider(groupId));
+  invalidate(groupDeclarationsProvider(groupId));
+  invalidate(groupFeedProvider(groupId));
+  invalidate(groupRankingProvider(groupId));
+  invalidate(groupStreakProvider(groupId));
+  invalidate(myGroupsProvider);
 }
+
+void invalidateGroup(WidgetRef ref, int groupId) =>
+    _invalidateGroupWith(ref.invalidate, groupId);
+
+void invalidateGroupFrom(Ref ref, int groupId) =>
+    _invalidateGroupWith(ref.invalidate, groupId);

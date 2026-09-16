@@ -2,6 +2,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../auth/presentation/auth_controller.dart';
 import '../data/todo_models.dart';
+import '../../goal/presentation/goal_provider.dart';
+import '../../group/presentation/group_provider.dart';
 import '../data/todo_repository.dart';
 
 part 'todo_provider.g.dart';
@@ -73,6 +75,11 @@ class DayTodosController extends _$DayTodosController {
         // 204 라 응답 바디가 없다. summary 는 로컬에서 이미 다시 셌다.
         await ref.read(todoRepositoryProvider).uncomplete(todo.todoId);
       }
+      // 선언한 항목을 체크하면 그룹의 달성률·연속 기록이 같이 움직인다.
+      // 하단 탭은 IndexedStack 이라 살아 있으므로 여기서 비워 주지 않으면 낡는다.
+      for (final link in todo.declarations) {
+        invalidateGroupFrom(ref, link.groupId);
+      }
     } catch (_) {
       state = AsyncData(snapshot);
       _syncWeek();
@@ -90,6 +97,29 @@ class DayTodosController extends _$DayTodosController {
     if (snapshot == null) return;
     state = AsyncData(_recount(snapshot, [...snapshot.items, created]));
     _syncWeek();
+  }
+
+  /// 목표를 갈아끼운다. [goalId] 가 null 이면 뗀다.
+  ///
+  /// 선언한 항목은 서버가 422 DECLARED_TODO_LOCKED 로 막는다. 화면에서 먼저
+  /// 걸러 내지만, 두 사람이 동시에 만졌을 때를 대비해 여기서도 그대로 던진다.
+  Future<void> changeGoal(Todo todo, int? goalId) async {
+    final updated = await ref.read(todoRepositoryProvider).update(
+          todo.todoId,
+          goalId: goalId,
+          clearGoal: goalId == null,
+        );
+    final snapshot = state.value;
+    if (snapshot == null) return;
+    state = AsyncData(
+      snapshot.copyWith(
+        items: snapshot.items
+            .map((e) => e.todoId == updated.todoId ? updated : e)
+            .toList(),
+      ),
+    );
+    // 양쪽 목표의 진행률이 모두 바뀐다 (뗀 쪽과 붙인 쪽).
+    ref.invalidate(activeGoalsProvider);
   }
 
   /// AI 초안을 한 번에 저장한다. 서버가 전부 만들거나 전부 만들지 않는다.

@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/network/api_response.dart';
@@ -42,6 +45,12 @@ abstract interface class GroupRepository {
     String? caption,
   });
 
+  /// 사진을 스토리지에 올리고 `file_key` 를 돌려준다.
+  ///
+  /// presign → 서명 URL 로 직접 PUT 두 단계다. 파일이 서버를 거치지 않는다.
+  /// 스토리지가 설정되지 않았으면 presign 에서 503 STORAGE_UNAVAILABLE 이 난다.
+  Future<String> uploadImage(File file, {String contentType});
+
   Future<PagedResponse<FeedEntry>> fetchFeed(
     int groupId, {
     String? date,
@@ -74,9 +83,12 @@ abstract interface class GroupRepository {
 }
 
 class GroupRepositoryImpl implements GroupRepository {
-  const GroupRepositoryImpl(this._api);
+  const GroupRepositoryImpl(this._api, this._uploader);
 
   final GroupApi _api;
+
+  /// 서명 URL 전용. 인증 헤더가 붙지 않는다 (dio_client.buildUploadDio 참고).
+  final Dio _uploader;
 
   @override
   Future<List<Group>> fetchMyGroups() => _api.fetchMyGroups();
@@ -132,6 +144,25 @@ class GroupRepositoryImpl implements GroupRepository {
       );
 
   @override
+  Future<String> uploadImage(
+    File file, {
+    String contentType = 'image/jpeg',
+  }) async {
+    final presigned = await _api.presign(contentType: contentType);
+    await _uploader.put<void>(
+      presigned.uploadUrl,
+      data: file.openRead(),
+      options: Options(
+        contentType: presigned.contentType,
+        headers: <String, dynamic>{
+          Headers.contentLengthHeader: await file.length(),
+        },
+      ),
+    );
+    return presigned.fileKey;
+  }
+
+  @override
   Future<PagedResponse<FeedEntry>> fetchFeed(
     int groupId, {
     String? date,
@@ -180,5 +211,7 @@ class GroupRepositoryImpl implements GroupRepository {
 }
 
 @Riverpod(keepAlive: true)
-GroupRepository groupRepository(Ref ref) =>
-    GroupRepositoryImpl(GroupApi(ref.watch(apiClientProvider)));
+GroupRepository groupRepository(Ref ref) => GroupRepositoryImpl(
+      GroupApi(ref.watch(apiClientProvider)),
+      ref.watch(uploadDioProvider),
+    );

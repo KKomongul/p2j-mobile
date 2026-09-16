@@ -527,6 +527,39 @@ void main() {
       await todos.complete(todo.todoId);
     });
 
+    test('오늘 목록의 할 일에 선언 링크가 실려 온다', () async {
+      if (skipIfNoServer()) return;
+      final day = await todos.fetchDay(today);
+      final declared = day.items.firstWhere((t) => t.isDeclared);
+
+      expect(declared.declarations, hasLength(1));
+      final link = declared.declarations.first;
+      expect(link.groupId, group.groupId);
+      expect(link.groupName, '계약테스트 조');
+      expect(link.declarationItemId, declarationItemId);
+      expect(link.hasProof, isFalse);
+
+      // 끝냈고 아직 사진이 없으니 인증샷을 붙일 수 있는 상태다.
+      expect(declared.canAttachProof, isTrue);
+      expect(declared.pendingProofTargets, hasLength(1));
+    });
+
+    test('인증샷을 올리면 할 일에도 붙는다', () async {
+      if (skipIfNoServer()) return;
+      await groupApi.createProof(
+        group.groupId,
+        declarationItemId: declarationItemId,
+        fileKey: 'proofs/contract/attached.jpg',
+        caption: '오늘 탭에서 올림',
+      );
+
+      final day = await todos.fetchDay(today);
+      final declared = day.items.firstWhere((t) => t.isDeclared);
+      expect(declared.proof?.caption, '오늘 탭에서 올림');
+      expect(declared.declarations.first.hasProof, isTrue);
+      expect(declared.canAttachProof, isFalse);
+    });
+
     test('같은 날 두 번 선언하면 409', () async {
       if (skipIfNoServer()) return;
       final todo = await todos.create(title: '두 번째 선언 시도');
@@ -552,19 +585,9 @@ void main() {
       expect(rows.first.achievementRate, 1.0);
     });
 
-    test('완료한 항목에 인증샷을 올린다', () async {
+    test('1항목 1인증', () async {
       if (skipIfNoServer()) return;
-      final proof = await groupApi.createProof(
-        group.groupId,
-        declarationItemId: declarationItemId,
-        fileKey: 'proofs/contract/test.jpg',
-        caption: '계약 테스트',
-      );
-      expect(proof.caption, '계약 테스트');
-      expect(proof.commentCount, 0);
-      expect(proof.reactions, isEmpty);
-
-      // 1항목 1인증
+      // 앞 테스트에서 이미 한 장 올렸다. 두 번째는 막혀야 한다.
       await expectLater(
         groupApi.createProof(
           group.groupId,

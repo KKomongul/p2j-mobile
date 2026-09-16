@@ -193,6 +193,23 @@ abstract class GroupInvite with _$GroupInvite {
       _$GroupInviteFromJson(json);
 }
 
+/// `POST /uploads/presign`.
+///
+/// 사진은 서버를 거치지 않는다. 이 URL 로 클라이언트가 스토리지에 직접 올리고
+/// [fileKey] 만 API 로 넘긴다.
+@freezed
+abstract class PresignResult with _$PresignResult {
+  const factory PresignResult({
+    @Default('') String uploadUrl,
+    @Default('') String fileKey,
+    @Default('image/jpeg') String contentType,
+    DateTime? expiresAt,
+  }) = _PresignResult;
+
+  factory PresignResult.fromJson(Map<String, dynamic> json) =>
+      _$PresignResultFromJson(json);
+}
+
 /// `GET /groups/{id}/members`.
 ///
 /// [todayAchievementRate] 는 **선언한 항목 기준**이다. 선언하지 않았으면 0 이다.

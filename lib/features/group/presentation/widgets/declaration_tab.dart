@@ -11,6 +11,7 @@ import '../../../../core/widgets/paper_card.dart';
 import '../../../../core/widgets/progress_bar.dart';
 import '../../../../core/widgets/status_chip.dart';
 import '../../../auth/presentation/auth_controller.dart';
+import '../../../todo/presentation/todo_provider.dart';
 import '../../data/group_models.dart';
 import '../group_detail_screen.dart';
 import '../group_provider.dart';
@@ -29,6 +30,8 @@ class DeclarationTab extends ConsumerWidget {
     if (declaration == null || !context.mounted) return;
 
     invalidateGroup(ref, group.groupId);
+    // 선언하면 그 할 일이 잠기고 그룹 이름이 붙는다. 오늘 화면도 같이 낡는다.
+    ref.invalidate(dayTodosControllerProvider);
     AppSnackBar.show(context, '${declaration.items.length}개를 선언했어요.');
   }
 
