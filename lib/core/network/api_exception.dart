@@ -26,6 +26,9 @@ enum ApiErrorCode {
   goalNotFound('GOAL_NOT_FOUND'),
   groupNotFound('GROUP_NOT_FOUND'),
   declarationNotFound('DECLARATION_NOT_FOUND'),
+  postNotFound('POST_NOT_FOUND'),
+  commentNotFound('COMMENT_NOT_FOUND'),
+  loadCheckNotFound('LOAD_CHECK_NOT_FOUND'),
   userNotFound('USER_NOT_FOUND'),
 
   // --- 405 ---
@@ -46,6 +49,7 @@ enum ApiErrorCode {
   declaredTodoLocked('DECLARED_TODO_LOCKED'),
   declarationClosed('DECLARATION_CLOSED'),
   declarationEmpty('DECLARATION_EMPTY'),
+  proofAlreadyExists('PROOF_ALREADY_EXISTS'),
   groupFull('GROUP_FULL'),
   invalidInviteCode('INVALID_INVITE_CODE'),
   inviteCodeExpired('INVITE_CODE_EXPIRED'),

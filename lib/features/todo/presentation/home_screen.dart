@@ -12,6 +12,7 @@ import 'todo_provider.dart';
 import 'widgets/add_todo_sheet.dart';
 import 'widgets/ai_draft_sheet.dart';
 import 'widgets/day_todo_list.dart';
+import 'widgets/load_check_banner.dart';
 import 'widgets/week_strip.dart';
 
 /// 홈 — 오늘의 투두.
@@ -53,6 +54,17 @@ class HomeScreen extends ConsumerWidget {
                   ref.read(selectedDateProvider.notifier).select(date),
             ),
           ),
+          // 계획량 안내는 오늘에만 붙는다. 지난 날짜를 볼 때 "많다" 고 말할 이유가 없다.
+          if (selectedDate == today)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                AppSpacing.s16,
+                AppSpacing.screenH,
+                0,
+              ),
+              child: LoadCheckBanner(),
+            ),
           Expanded(child: DayTodoList(date: selectedDate)),
         ],
       ),

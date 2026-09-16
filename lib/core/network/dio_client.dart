@@ -37,6 +37,10 @@ class ApiClient {
   Future<Response<dynamic>> patch(String path, {Object? data}) =>
       _guard(() => _dio.patch<dynamic>(path, data: data));
 
+  /// 서버에서 PUT 은 UPSERT 다. 리액션은 사용자당 1개라 다시 보내면 교체된다.
+  Future<Response<dynamic>> put(String path, {Object? data}) =>
+      _guard(() => _dio.put<dynamic>(path, data: data));
+
   Future<Response<dynamic>> delete(String path) =>
       _guard(() => _dio.delete<dynamic>(path));
 

@@ -5,12 +5,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../features/auth/data/auth_models.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/goal/presentation/goal_list_screen.dart';
+import '../../features/group/presentation/group_list_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/shell/presentation/main_shell.dart';
-import '../../features/shell/presentation/placeholder_screen.dart';
 import '../../features/shell/presentation/splash_screen.dart';
+import '../../features/stats/presentation/stats_screen.dart';
 import '../../features/todo/presentation/home_screen.dart';
-import '../theme/app_illustrations.dart';
 import 'routes.dart';
 
 part 'app_router.g.dart';
@@ -94,11 +94,7 @@ GoRouter goRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: Routes.group,
-                builder: (context, state) => const PlaceholderScreen(
-                  title: '그룹',
-                  description: '아침에 선언하고 저녁에 인증하는 기능을\n준비하고 있어요.',
-                  imagePath: AppIllustrations.groupShare,
-                ),
+                builder: (context, state) => const GroupListScreen(),
               ),
             ],
           ),
@@ -106,11 +102,7 @@ GoRouter goRouter(Ref ref) {
             routes: [
               GoRoute(
                 path: Routes.stats,
-                builder: (context, state) => const PlaceholderScreen(
-                  title: '통계',
-                  description: '달성률이 어떻게 쌓이는지\n한눈에 보여 드릴게요.',
-                  imagePath: AppIllustrations.loadAdjust,
-                ),
+                builder: (context, state) => const StatsScreen(),
               ),
             ],
           ),

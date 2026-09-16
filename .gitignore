@@ -24,3 +24,6 @@ android/key.properties
 
 # 로컬 실행 설정
 .claude/
+
+# custom_lint 가 실행할 때마다 남기는 로그
+custom_lint.log

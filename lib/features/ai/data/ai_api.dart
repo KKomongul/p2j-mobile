@@ -1,6 +1,7 @@
 import '../../../core/network/api_response.dart';
 import '../../../core/network/dio_client.dart';
 import 'ai_models.dart';
+import 'load_check_models.dart';
 
 /// `/v1/ai/*` 호출만 담당한다.
 ///
@@ -45,5 +46,36 @@ class AiApi {
   Future<AiQuota> fetchQuota() async {
     final response = await _client.get('/ai/quota');
     return ApiResponse.object(response, AiQuota.fromJson).data;
+  }
+
+  /// 오늘 계획이 평소 소화량을 넘는지. `GET /ai/load-check?date=`
+  ///
+  /// **집계 기반이라 LLM 을 쓰지 않는다.** 실패해도 429·503 이 오지 않는다.
+  /// 하루 한 번만 계산되고, 같은 날 다시 부르면 저장된 결과가 그대로 온다.
+  Future<LoadCheck> fetchLoadCheck({String? date}) async {
+    final response = await _client.get(
+      '/ai/load-check',
+      query: <String, dynamic>{if (date != null) 'date': date},
+    );
+    return ApiResponse.object(response, LoadCheck.fromJson).data;
+  }
+
+  /// 안내를 받아들였는지 기록. `POST /ai/load-check/{check_id}/response`
+  ///
+  /// 실제로 미루는 건 `TodoApi.postpone` 이 한다. 여기는 결과만 남긴다 —
+  /// 수락률이 다음 판정의 근거가 된다.
+  Future<LoadCheck> respondLoadCheck(
+    String checkId, {
+    required bool accepted,
+    List<int> appliedTodoIds = const <int>[],
+  }) async {
+    final response = await _client.post(
+      '/ai/load-check/$checkId/response',
+      data: <String, dynamic>{
+        'accepted': accepted,
+        'applied_todo_ids': appliedTodoIds,
+      },
+    );
+    return ApiResponse.object(response, LoadCheck.fromJson).data;
   }
 }

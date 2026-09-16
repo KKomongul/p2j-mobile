@@ -1,5 +1,6 @@
 import 'fixture_loader.dart';
 import 'mock_scenario.dart';
+import 'mock_social.dart';
 
 /// Mock 응답 한 건.
 class MockResult {
@@ -55,6 +56,13 @@ class MockStore {
   /// tokenExpired 시나리오에서 401 을 한 번만 내기 위한 플래그.
   bool _tokenExpiryFired = false;
 
+  /// 통계·계획량 안내·그룹·피드·랭킹. 투두 원본을 그대로 참조한다.
+  late final MockSocial _social = MockSocial(
+    todosByDate: _todosByDate,
+    currentUser: () => _user,
+    today: () => _today,
+  );
+
   String get today => _today;
 
   /// 서버가 판단하는 '오늘'. 하루의 경계는 자정이 아니라 04:00 KST 다.
@@ -102,6 +110,7 @@ class MockStore {
     _nextGoalId = 90;
     _aiUsedToday = 0;
     _tokenExpiryFired = false;
+    _social.reset();
   }
 
   // ---------------------------------------------------------------- 라우팅
@@ -137,8 +146,24 @@ class MockStore {
       return _handleGoals(method, segments, query, body);
     }
     if (segments.first == 'ai') {
+      // 계획량 안내는 집계 기반이라 AI 쿼터와 무관하다. 먼저 가로챈다.
+      final loadCheck = _social.handleLoadCheck(
+        method: method,
+        segments: segments,
+        query: query,
+        body: body,
+      );
+      if (loadCheck != null) return loadCheck;
       return _handleAi(method, segments, body);
     }
+
+    final social = _social.handle(
+      method: method,
+      segments: segments,
+      query: query,
+      body: body,
+    );
+    if (social != null) return social;
 
     return _notFound();
   }
