@@ -163,8 +163,13 @@ class _GoalButton extends StatelessWidget {
       message: linked ? '목표 바꾸기' : '목표에 넣기',
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
+        customBorder: const CircleBorder(),
+        // 그림은 32dp 지만 터치 영역은 48dp 를 지킨다 (디자인 §1.2).
         child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          child: Container(
           width: 32,
           height: 32,
           alignment: Alignment.center,
@@ -183,6 +188,7 @@ class _GoalButton extends StatelessWidget {
                 : linked
                     ? AppColors.purple
                     : AppColors.muted,
+          ),
           ),
         ),
       ),
@@ -204,8 +210,10 @@ class _ProofButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.pill),
       child: Container(
-        constraints: const BoxConstraints(minHeight: 32),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        // 칩처럼 보이지만 누르는 것이라 48dp 를 채운다.
+        constraints: const BoxConstraints(minHeight: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: AppColors.amberSurface,
           borderRadius: BorderRadius.circular(AppRadius.pill),

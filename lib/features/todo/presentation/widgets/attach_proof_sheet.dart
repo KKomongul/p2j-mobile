@@ -25,9 +25,12 @@ class AttachProofSheet extends ConsumerStatefulWidget {
 
   final Todo todo;
 
-  /// 올렸으면 true. 취소하면 null.
-  static Future<bool?> show(BuildContext context, Todo todo) {
-    return showModalBottomSheet<bool>(
+  /// 올리지 **못한** 그룹 이름들. 취소하면 null, 전부 성공하면 빈 목록이다.
+  ///
+  /// bool 로 하면 "두 그룹 중 하나만 올라감" 을 표현할 수 없다. 부분 성공은
+  /// 되돌릴 방법이 없으므로(서버에 묶음 등록이 없다) 있는 그대로 넘긴다.
+  static Future<List<String>?> show(BuildContext context, Todo todo) {
+    return showModalBottomSheet<List<String>>(
       context: context,
       isScrollControlled: true,
       builder: (_) => AttachProofSheet(todo: todo),
@@ -84,18 +87,38 @@ class _AttachProofSheetState extends ConsumerState<AttachProofSheet> {
     final repository = ref.read(groupRepositoryProvider);
     final caption = _captionController.text.trim();
 
+    final targets = widget.todo.pendingProofTargets;
     try {
       // 한 번만 올리고 file_key 를 그룹마다 재사용한다. 같은 사진이니까.
       final fileKey = await repository.uploadImage(photo);
-      for (final target in widget.todo.pendingProofTargets) {
-        await repository.createProof(
-          target.groupId,
-          declarationItemId: target.declarationItemId,
-          fileKey: fileKey,
-          caption: caption.isEmpty ? null : caption,
-        );
+
+      // 그룹 하나가 막혀도 나머지는 올린다. 전부 되돌릴 방법이 없어서
+      // (서버에 묶음 등록이 없다) 중간에 멈추면 어디까지 올라갔는지 알 수 없다.
+      final failed = <String>[];
+      for (final target in targets) {
+        try {
+          await repository.createProof(
+            target.groupId,
+            declarationItemId: target.declarationItemId,
+            fileKey: fileKey,
+            caption: caption.isEmpty ? null : caption,
+          );
+        } on ApiException {
+          failed.add(target.groupName);
+        }
       }
-      if (mounted) Navigator.of(context).pop(true);
+
+      if (!mounted) return;
+      if (failed.length == targets.length) {
+        // 한 곳도 못 올렸으면 시트를 닫지 않는다. 다시 누를 수 있어야 한다.
+        setState(() {
+          _busy = false;
+          _error = '올리지 못했어요. 잠시 후 다시 시도해 주세요.';
+        });
+        return;
+      }
+      // 하나라도 올라갔으면 닫는다. 어디가 빠졌는지는 부른 쪽이 말한다.
+      Navigator.of(context).pop(failed);
     } on ApiException catch (error) {
       if (mounted) {
         setState(() {

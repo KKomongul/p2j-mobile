@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/media_url.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_illustrations.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -150,7 +151,7 @@ class _ProofRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.r8),
       child: Row(
         children: [
-          _Thumb(url: proof.imageUrl),
+          _Thumb(url: absoluteMediaUrl(proof.imageUrl)),
           const SizedBox(width: AppSpacing.s12),
           Expanded(
             child: Column(

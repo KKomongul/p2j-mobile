@@ -163,14 +163,18 @@ class _TodoCard extends ConsumerWidget {
     WidgetRef ref,
     Todo todo,
   ) async {
-    final uploaded = await AttachProofSheet.show(context, todo);
-    if (uploaded != true || !context.mounted) return;
+    final failed = await AttachProofSheet.show(context, todo);
+    if (failed == null || !context.mounted) return;
 
     ref.invalidate(dayTodosControllerProvider(date));
     for (final target in todo.declarations) {
       invalidateGroup(ref, target.groupId);
     }
-    AppSnackBar.show(context, '인증샷을 올렸어요.');
+    if (failed.isEmpty) {
+      AppSnackBar.show(context, '인증샷을 올렸어요.');
+    } else {
+      AppSnackBar.error(context, '${failed.join(' · ')}에는 올리지 못했어요.');
+    }
   }
 
   Future<void> _toggle(BuildContext context, WidgetRef ref, Todo todo) async {

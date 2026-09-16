@@ -27,6 +27,7 @@ import 'package:p2j_mobile/features/goal/data/goal_api.dart';
 import 'package:p2j_mobile/features/goal/data/goal_models.dart';
 import 'package:p2j_mobile/features/ai/data/load_check_models.dart';
 import 'package:p2j_mobile/features/group/data/group_api.dart';
+import 'package:p2j_mobile/features/group/data/group_repository.dart';
 import 'package:p2j_mobile/features/group/data/group_models.dart';
 import 'package:p2j_mobile/features/stats/data/stats_api.dart';
 import 'package:p2j_mobile/features/stats/data/stats_models.dart';
@@ -671,20 +672,64 @@ void main() {
   });
 
   group('uploads', () {
-    test('스토리지 미설정이면 503 STORAGE_UNAVAILABLE', () async {
+    test('presign 은 설정 없이 바로 된다 (local 드라이버)', () async {
+      if (skipIfNoServer()) return;
+      final presigned = await groupApi.presign(contentType: 'image/png');
+      expect(presigned.fileKey, startsWith('proofs/'));
+      expect(presigned.fileKey, endsWith('.png'));
+      expect(presigned.uploadUrl, contains('token='));
+      expect(presigned.maxBytes, greaterThan(0));
+    });
+
+    test('업로드한 사진을 다시 내려받을 수 있다', () async {
+      if (skipIfNoServer()) return;
+      final repository = GroupRepositoryImpl(
+        GroupApi(clientWith(accessToken: accessToken)),
+        Dio(BaseOptions(baseUrl: baseUrl)),
+      );
+
+      // 1x1 PNG. 실제 바이트여야 왕복을 확인할 수 있다.
+      final bytes = <int>[
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, //
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+        0x89, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41,
+        0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+        0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00,
+        0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+        0x42, 0x60, 0x82,
+      ];
+      final file = File(
+        '${Directory.systemTemp.path}/p2j-contract-${DateTime.now().microsecondsSinceEpoch}.png',
+      )..writeAsBytesSync(bytes);
+
+      final fileKey = await repository.uploadImage(file, contentType: 'image/png');
+      expect(fileKey, endsWith('.png'));
+
+      // 서버가 준 상대 경로를 그대로 받아 본다. 인증 헤더 없이 열린다.
+      final fetched = await Dio(BaseOptions(baseUrl: baseUrl))
+          .get<List<int>>(
+            '/files/$fileKey',
+            options: Options(responseType: ResponseType.bytes),
+          );
+      expect(fetched.statusCode, 200);
+      expect(fetched.data, bytes);
+
+      file.deleteSync();
+    });
+
+    test('형식이 맞지 않으면 VALIDATION_ERROR', () async {
       if (skipIfNoServer()) return;
       final client = clientWith(accessToken: accessToken);
       await expectLater(
         client.post(
           '/uploads/presign',
-          data: <String, dynamic>{
-            'content_type': 'image/jpeg',
-            'purpose': 'proof',
-          },
+          data: <String, dynamic>{'content_type': 'application/pdf'},
         ),
         throwsA(
           isA<ApiException>()
-              .having((e) => e.code, 'code', ApiErrorCode.storageUnavailable),
+              .having((e) => e.code, 'code', ApiErrorCode.validationError),
         ),
       );
     });

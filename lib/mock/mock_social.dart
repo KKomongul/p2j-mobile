@@ -160,8 +160,7 @@ class MockSocial {
       'groups' => _handleGroups(method, segments, query, body),
       'posts' => _handlePosts(method, segments, query, body),
       'comments' => _handleComments(method, segments),
-      'uploads' => _handleUploads(segments),
-      '_mock' => _handleUpload(method),
+      'uploads' => _handleUploads(method, segments),
       _ => null,
     };
   }
@@ -1265,30 +1264,30 @@ class MockSocial {
 
   // ------------------------------------------------------------------ 업로드
 
-  /// 업로드는 **성공시킨다.** 실서버는 Firebase 자격증명이 없으면 503 이지만,
-  /// Mock 까지 막아 두면 인증샷 흐름을 화면에서 한 번도 못 밟아 본다.
+  /// presign 과 실제 업로드. **서버의 local 드라이버와 같은 모양**으로 답한다.
   ///
   /// 상대 경로 업로드 URL 을 주는 게 요령이다. 업로드 전용 Dio 의 baseUrl 이
   /// API 와 같아서 이 인터셉터가 PUT 을 그대로 받아 낸다.
-  MockResult _handleUploads(List<String> segments) {
-    if (segments.length == 2 && segments[1] == 'presign') {
-      final key = 'proofs/${_today()}/${_nextPostId + 1}.jpg';
+  MockResult _handleUploads(String method, List<String> segments) {
+    if (method == 'POST' && segments.length == 2 && segments[1] == 'presign') {
+      final key = 'proofs/${_today().replaceAll('-', '/')}/'
+          'mock${_nextPostId + 1}.jpg';
       return MockResult(200, <String, dynamic>{
         'data': <String, dynamic>{
-          'upload_url': '/_mock/upload/${Uri.encodeComponent(key)}',
+          'upload_url': '/uploads/blob/$key?expires=0&token=mock',
           'file_key': key,
           'content_type': 'image/jpeg',
+          'max_bytes': 10485760,
           'expires_at': _iso(_today()),
         },
       });
     }
+    // 서명 URL 로 들어오는 PUT. 바이트는 버린다 — 흐름만 확인하면 된다.
+    if (method == 'PUT' && segments.length > 2 && segments[1] == 'blob') {
+      return const MockResult(204);
+    }
     return MockResult.error(404, 'NOT_FOUND', '요청한 경로를 찾을 수 없어요.');
   }
-
-  /// 서명 URL 로 들어오는 PUT. 바이트는 버린다 — 흐름만 확인하면 된다.
-  MockResult _handleUpload(String method) => method == 'PUT'
-      ? const MockResult(200)
-      : MockResult.error(404, 'NOT_FOUND', '요청한 경로를 찾을 수 없어요.');
 
   // -------------------------------------------------------------- 선언 링크
 

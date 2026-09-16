@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/media_url.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -124,7 +125,7 @@ class _ProofSheetState extends ConsumerState<ProofSheet> {
                         style: AppTypography.bodyStrong,
                       ),
                     const SizedBox(height: AppSpacing.s12),
-                    _Photo(url: widget.proof.imageUrl),
+                    _Photo(url: absoluteMediaUrl(widget.proof.imageUrl)),
                     if (widget.proof.caption?.isNotEmpty ?? false) ...[
                       const SizedBox(height: AppSpacing.s12),
                       Text(
@@ -270,8 +271,8 @@ class _ReactionButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.pill),
       child: Container(
-        // 48dp 터치 영역에 가깝게 유지한다.
-        constraints: const BoxConstraints(minWidth: 52, minHeight: 40),
+        // 48dp 터치 영역 (디자인 §1.2).
+        constraints: const BoxConstraints(minWidth: 56, minHeight: 48),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s8),
         decoration: BoxDecoration(
           color: selected ? AppColors.purpleSurface : AppColors.fill,

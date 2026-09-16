@@ -203,6 +203,9 @@ abstract class PresignResult with _$PresignResult {
     @Default('') String uploadUrl,
     @Default('') String fileKey,
     @Default('image/jpeg') String contentType,
+
+    /// 서버가 받아 주는 상한. 넘으면 413 FILE_TOO_LARGE 다.
+    @Default(10485760) int maxBytes,
     DateTime? expiresAt,
   }) = _PresignResult;
 
