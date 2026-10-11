@@ -76,14 +76,24 @@ class _TodoCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: [
-        for (var i = 0; i < items.length; i++) ...[
-          if (i > 0)
-            const Divider(indent: AppSpacing.s20, endIndent: AppSpacing.s20),
-          _dismissible(context, ref, items[i]),
+    // 목록을 흰 카드 한 장으로 묶는다. 스와이프 삭제의 빨간 면이 카드 밖으로
+    // 새지 않게 모서리를 자른다.
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.r16),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0)
+              const Divider(indent: AppSpacing.s20, endIndent: AppSpacing.s20),
+            _dismissible(context, ref, items[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 

@@ -31,6 +31,8 @@ class GoalListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('목표')),
       floatingActionButton: FloatingActionButton(
+        // 탭 셸이 세 화면을 함께 살려 두므로 기본 hero 태그가 겹친다.
+        heroTag: 'fab-goals',
         backgroundColor: AppColors.ink,
         foregroundColor: Colors.white,
         elevation: 0,

@@ -31,9 +31,9 @@ class GoalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
-        // 배경도 흰색이라 테두리로만 구분하면 약하다. 옅은 채움으로 띄운다.
-        color: AppColors.fill,
-        borderRadius: BorderRadius.circular(AppRadius.r8),
+        // 회색 바탕 위의 흰 카드. 통계 · 그룹 카드와 같은 결.
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.r16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
