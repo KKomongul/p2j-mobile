@@ -5,9 +5,13 @@ import 'package:flutter/material.dart';
 /// 팔레트는 마스코트 플랜펭에서 뽑았다. 네이비 몸통, 라벤더 소품, 앰버 발,
 /// 크림색 종이. 그래서 일러스트가 화면에 얹혔을 때 겉돌지 않는다.
 ///
-/// 분위기는 **페이퍼컷**이다. 색종이를 오려 붙인 층이 배경 → 종이 카드 →
-/// 네이비 면 순으로 쌓인다. 층을 나누는 건 그림자가 아니라 색이다.
-/// 그림자는 종이가 살짝 떠 보일 만큼만 쓴다.
+/// 분위기는 **정돈된 회색 바탕 + 흰 카드**다. 회색 배경([background]) 위에 흰 카드
+/// ([paper] = [surface])를 쌓고, 층은 그림자가 아니라 색으로 나눈다. 따뜻한 색(앰버 ·
+/// 민트 · 라벤더)은 면을 칠하지 않고 **상태와 보상**에만 쓴다. 인트로 · 스플래시처럼
+/// 네이비가 화면 전체인 곳은 그대로다.
+///
+/// 처음에는 크림색 종이 질감이었다. 그룹 · 통계를 여러 사람의 현황을 훑는 화면으로
+/// 다시 그리면서 앱 전체를 같은 톤으로 맞췄다.
 ///
 /// 파스텔은 **면(fill)** 으로 쓰고, 글자·아이콘·얇은 선에는 같은 계열의
 /// 짙은 짝(`~Ink`)을 쓴다. 파스텔을 그대로 텍스트에 쓰면 대비가 안 나온다.
@@ -15,20 +19,20 @@ import 'package:flutter/material.dart';
 abstract final class AppColors {
   // ---------------------------------------------------------------- 종이
 
-  /// 앱 배경. 아주 옅은 웜 그레이. 순백이 아니라 종이 카드가 뜬다.
-  static const Color background = Color(0xFFFAF7F4);
+  /// 앱 배경. 옅은 중성 회색. 순백이 아니라서 흰 카드가 뜬다.
+  static const Color background = Color(0xFFF3F3F6);
 
-  /// 종이 카드. 오려 붙인 크림색 면.
-  static const Color paper = Color(0xFFF7EBDA);
+  /// 카드 면. 회색 배경 위의 흰 카드. ([PaperCard] 의 기본색)
+  static const Color paper = Color(0xFFFFFFFF);
 
   /// 장식 없는 평면. 목록, 바텀시트처럼 빠르게 읽어야 하는 곳.
   static const Color surface = Color(0xFFFFFFFF);
 
-  /// 입력칸, 진행률 트랙 같은 옅은 채움.
-  static const Color fill = Color(0xFFF0E6DA);
+  /// 입력칸, 진행률 트랙, 중립 칩 같은 옅은 채움. 흰 면 위에서 쓴다.
+  static const Color fill = Color(0xFFF0F0F4);
 
-  /// 구분선. 종이 위에서 튀지 않을 만큼만.
-  static const Color line = Color(0xFFE7DCCE);
+  /// 구분선. 흰 카드 안에서 튀지 않을 만큼만.
+  static const Color line = Color(0xFFE6E6EC);
 
   // ---------------------------------------------------------------- 잉크
 
@@ -109,6 +113,21 @@ abstract final class AppColors {
 
   /// 오류 배너 배경.
   static const Color coralSurface = Color(0xFFF9EDEA);
+
+  // ------------------------------------------------------- 정돈된 면
+
+  /// 흰 화면([surface]) 위의 옅은 회색 면. 타일 · 하단 툴바 · 통계 패널.
+  /// 배경([background])과 같은 값이다 — 흰 면 안에 "바탕이 비쳐 보이는" 칸.
+  static const Color neutralFill = background;
+
+  /// 흰 화면 위 구분선 · 타일 테두리. [line] 과 같다.
+  static const Color neutralLine = line;
+
+  /// 차트의 "약한 쪽" 막대 · 남은 몫. **면으로만** 쓴다. 보라(잘한 쪽)와 짝을 이룬다.
+  static const Color rose = Color(0xFFF0A6B6);
+
+  /// [rose] 계열 글자 · 아이콘용. 흰 면 위 대비 4.6:1.
+  static const Color roseInk = Color(0xFFB4485F);
 
   // ------------------------------------------------------------ 그림자
 

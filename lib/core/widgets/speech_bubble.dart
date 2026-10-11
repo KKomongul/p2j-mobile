@@ -10,7 +10,8 @@ import '../theme/app_spacing.dart';
 class SpeechBubble extends StatelessWidget {
   const SpeechBubble({
     required this.child,
-    this.color = AppColors.background,
+    // 인트로의 네이비 면 위에 뜨는 말풍선. 회색 배경색을 쓰면 탁해 보인다.
+    this.color = AppColors.onNavy,
     this.padding = const EdgeInsets.symmetric(
       horizontal: AppSpacing.s24,
       vertical: AppSpacing.s20,

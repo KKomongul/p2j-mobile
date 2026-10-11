@@ -50,7 +50,8 @@ abstract final class AppTheme {
       splashFactory: InkSparkle.splashFactory,
 
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.background,
+        // 앱바는 흰 면, 본문은 회색 바탕. 위아래가 한 층으로 붙어 보이지 않게 한다.
+        backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         foregroundColor: AppColors.ink,
         elevation: 0,

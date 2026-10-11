@@ -78,6 +78,7 @@ class SegmentedChoice<T> extends StatelessWidget {
     required this.options,
     required this.onChanged,
     this.compact = false,
+    this.idleColor = AppColors.fill,
     super.key,
   });
 
@@ -90,6 +91,9 @@ class SegmentedChoice<T> extends StatelessWidget {
   /// 다른 컨트롤과 한 줄에 놓을 때. 가로로 늘리지 않는다.
   final bool compact;
 
+  /// 선택되지 않은 칸의 면. 흰 화면(그룹)에서는 [AppColors.neutralFill] 을 넘긴다.
+  final Color idleColor;
+
   @override
   Widget build(BuildContext context) {
     final children = <Widget>[];
@@ -101,6 +105,7 @@ class SegmentedChoice<T> extends StatelessWidget {
         selected: option.value == value,
         enabled: onChanged != null,
         compact: compact,
+        idleColor: idleColor,
         onTap: () => onChanged?.call(option.value),
       );
       children.add(compact ? button : Expanded(child: button));
@@ -115,6 +120,7 @@ class _Segment extends StatelessWidget {
     required this.selected,
     required this.enabled,
     required this.compact,
+    required this.idleColor,
     required this.onTap,
   });
 
@@ -122,15 +128,16 @@ class _Segment extends StatelessWidget {
   final bool selected;
   final bool enabled;
   final bool compact;
+  final Color idleColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final background = !enabled
-        ? AppColors.fill
+        ? idleColor
         : selected
             ? AppColors.purple
-            : AppColors.fill;
+            : idleColor;
     final foreground = !enabled
         ? AppColors.disabled
         : selected

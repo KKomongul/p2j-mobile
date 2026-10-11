@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
-/// 오려 붙인 색종이 한 장.
+/// 회색 배경 위의 흰 카드 한 장.
 ///
-/// 배경 위에 살짝 떠 있는 층을 만든다. 조명은 좌측 상단에서 들어오므로
-/// 그림자는 오른쪽 아래로 짧게 진다.
+/// 층은 그림자가 아니라 색(회색 바탕 / 흰 면)으로 나눈다. 그림자는 다른 흰 면 위에
+/// 겹쳐 띄워야 할 때만 [elevated] 로 켠다. (이름은 종이 질감이던 시절의 것이다.)
 ///
 /// **모든 정보를 이 카드에 넣지 않는다.** 목록처럼 빠르게 훑어야 하는 것은
 /// 평면에 두고, 카드는 한 화면에 한두 장만 쓴다. 카드 안에 카드를 겹치지 않는다.
@@ -16,19 +16,19 @@ class PaperCard extends StatelessWidget {
     this.color = AppColors.paper,
     this.padding = const EdgeInsets.all(AppSpacing.s16),
     this.onTap,
-    this.elevated = true,
+    this.elevated = false,
     super.key,
   });
 
   final Widget child;
 
-  /// 종이 색. 기본은 크림. 강조가 필요하면 [AppColors.amber] 를 넣는다.
+  /// 카드 색. 기본은 흰색. 흰 화면 위에서는 [AppColors.neutralFill] 을 넣는다.
   final Color color;
 
   final EdgeInsets padding;
   final VoidCallback? onTap;
 
-  /// 그림자를 줄지. 다른 면 위에 겹쳐 놓을 때는 꺼서 층을 하나로 유지한다.
+  /// 그림자를 줄지. 기본은 끈다 — 회색 바탕 위 흰 카드는 색만으로 뜬다.
   final bool elevated;
 
   @override
@@ -38,7 +38,7 @@ class PaperCard extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(AppRadius.r8),
+        borderRadius: BorderRadius.circular(AppRadius.r16),
         boxShadow: elevated
             ? const <BoxShadow>[
                 BoxShadow(
@@ -55,7 +55,7 @@ class PaperCard extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: onTap,
-                borderRadius: BorderRadius.circular(AppRadius.r8),
+                borderRadius: BorderRadius.circular(AppRadius.r16),
                 child: body,
               ),
             ),
