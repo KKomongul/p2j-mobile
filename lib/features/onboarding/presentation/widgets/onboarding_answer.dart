@@ -82,6 +82,9 @@ class OnboardingField extends StatelessWidget {
           obscureText: obscureText,
           onSubmitted: (_) => onSubmitted(),
           autofocus: true,
+          // 글자가 이미 story 크기라 돋보기가 필요 없다. 켜 두면 길게 누를 때
+          // 입력칸 바로 위에 같은 글자(빈 칸이면 힌트)가 하나 더 떠서 두 줄로 보인다.
+          magnifierConfiguration: TextMagnifierConfiguration.disabled,
           cursorColor: AppColors.amber,
           style: AppTypography.story.copyWith(color: AppColors.onNavy),
           decoration: InputDecoration(

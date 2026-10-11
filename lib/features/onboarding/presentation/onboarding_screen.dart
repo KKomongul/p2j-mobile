@@ -275,12 +275,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  // 줄마다 key 를 바꿔 새 줄에서는 항상 숨은 상태로 시작하게 한다.
+                  // key 가 없으면 앞 줄의 이미 보이던 FadeSlideIn 을 물려받아,
+                  // 입력칸이 한 번 보였다가 내려가고 다시 올라온다.
                   children: [
                     if (_field() != null) ...[
-                      FadeSlideIn(visible: _typed, child: _field()!),
+                      FadeSlideIn(
+                        key: ValueKey(('field', _step)),
+                        visible: _typed,
+                        child: _field()!,
+                      ),
                       const SizedBox(height: AppSpacing.s16),
                     ],
-                    FadeSlideIn(visible: _typed, child: _action()),
+                    FadeSlideIn(
+                      key: ValueKey(('action', _step)),
+                      visible: _typed,
+                      child: _action(),
+                    ),
                   ],
                 ),
               ),
