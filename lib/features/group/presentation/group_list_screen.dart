@@ -11,7 +11,7 @@ import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_view.dart';
 import 'group_detail_screen.dart';
 import 'group_provider.dart';
-import 'widgets/group_card.dart';
+import 'widgets/group_list_row.dart';
 import 'widgets/group_start_sheet.dart';
 
 /// 그룹 탭 — 내가 속한 그룹 목록.
@@ -41,7 +41,7 @@ class GroupListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('그룹'),
+        title: const Text('내가 가입한 그룹'),
         actions: [
           IconButton(
             tooltip: '코드로 참여',
@@ -53,6 +53,8 @@ class GroupListScreen extends ConsumerWidget {
       floatingActionButton: groups.value?.isEmpty ?? true
           ? null
           : FloatingActionButton(
+              // 탭 셸이 세 화면을 함께 살려 두므로 기본 hero 태그가 겹친다.
+              heroTag: 'fab-groups',
               backgroundColor: AppColors.ink,
               foregroundColor: Colors.white,
               elevation: 0,
@@ -72,26 +74,46 @@ class GroupListScreen extends ConsumerWidget {
           return RefreshIndicator(
             color: AppColors.ink,
             onRefresh: () async => ref.invalidate(myGroupsProvider),
-            child: ListView.separated(
+            // 다른 탭과 같이 회색 바탕 위 흰 카드 한 장에 줄을 담는다.
+            child: ListView(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.screenH,
-                AppSpacing.s20,
+                AppSpacing.s16,
                 AppSpacing.screenH,
-                AppSpacing.s40,
+                AppSpacing.s40 * 2, // FAB 에 마지막 줄이 가리지 않게
               ),
-              itemCount: items.length,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: AppSpacing.s12),
-              itemBuilder: (context, index) {
-                final group = items[index];
-                return GroupCard(
-                  group: group,
-                  onTap: () async {
-                    await GroupDetailScreen.push(context, group.groupId);
-                    if (context.mounted) ref.invalidate(myGroupsProvider);
-                  },
-                );
-              },
+              children: [
+                Container(
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.r16),
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: items.length,
+                    separatorBuilder: (context, index) => const Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: AppSpacing.screenH,
+                      endIndent: AppSpacing.screenH,
+                      color: AppColors.neutralLine,
+                    ),
+                    itemBuilder: (context, index) {
+                      final group = items[index];
+                      return GroupListRow(
+                        group: group,
+                        onTap: () async {
+                          await GroupDetailScreen.push(context, group.groupId);
+                          if (context.mounted) ref.invalidate(myGroupsProvider);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         },

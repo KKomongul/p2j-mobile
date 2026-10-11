@@ -35,6 +35,7 @@ class RankingTab extends ConsumerWidget {
       children: [
         SegmentedChoice<RankingPeriod>(
           value: period,
+          idleColor: AppColors.neutralFill,
           onChanged: (next) =>
               ref.read(rankingPeriodControllerProvider.notifier).select(next),
           options: const [
@@ -149,6 +150,7 @@ class _RankRow extends StatelessWidget {
                 const SizedBox(height: AppSpacing.s8),
                 ProgressBar(
                   value: entry.achievementRate,
+                  trackColor: AppColors.neutralFill,
                   fillColor: isMe ? AppColors.purple : AppColors.lavender,
                 ),
                 const SizedBox(height: AppSpacing.s4),

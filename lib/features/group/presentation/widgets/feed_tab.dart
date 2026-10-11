@@ -80,7 +80,10 @@ class _FeedEntryCard extends ConsumerWidget {
     final cleared =
         entry.declaredCount > 0 && entry.doneCount >= entry.declaredCount;
 
+    // 흰 그룹 화면 위에서는 크림 종이 대신 옅은 회색 면으로 하루를 묶는다.
     return PaperCard(
+      color: AppColors.neutralFill,
+      elevated: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -219,7 +222,7 @@ class _Thumb extends StatelessWidget {
         height: 56,
         child: url == null
             ? const ColoredBox(
-                color: AppColors.fill,
+                color: AppColors.surface,
                 child: Icon(
                   Icons.photo_rounded,
                   size: 20,
@@ -230,7 +233,7 @@ class _Thumb extends StatelessWidget {
                 url!,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stack) => const ColoredBox(
-                  color: AppColors.fill,
+                  color: AppColors.surface,
                   child: Icon(
                     Icons.broken_image_rounded,
                     size: 20,
@@ -254,7 +257,7 @@ class _MissedList extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.s12),
       decoration: BoxDecoration(
-        color: AppColors.fill,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.r8),
       ),
       child: Column(
