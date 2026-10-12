@@ -18,6 +18,8 @@ class TodoTile extends StatelessWidget {
     required this.onLockedTap,
     required this.onAttachProof,
     required this.onChangeGoal,
+    required this.onRename,
+    required this.onDelete,
     super.key,
   });
 
@@ -30,6 +32,8 @@ class TodoTile extends StatelessWidget {
 
   /// 목표 갈아끼우기. 선언한 항목이면 잠긴 이유를 알린다.
   final VoidCallback onChangeGoal;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -61,8 +65,9 @@ class TodoTile extends StatelessWidget {
                             color: done || inactive
                                 ? AppColors.disabled
                                 : AppColors.ink,
-                            decoration:
-                                done ? TextDecoration.lineThrough : null,
+                            decoration: done
+                                ? TextDecoration.lineThrough
+                                : null,
                             decorationColor: AppColors.muted,
                           ),
                         ),
@@ -86,7 +91,25 @@ class TodoTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.s4),
-            _GoalButton(todo: todo, onTap: onChangeGoal),
+            PopupMenuButton<String>(
+              tooltip: '할 일 메뉴',
+              icon: const Icon(Icons.more_vert_rounded),
+              onSelected: (action) {
+                switch (action) {
+                  case 'rename':
+                    onRename();
+                  case 'delete':
+                    onDelete();
+                  case 'goal':
+                    onChangeGoal();
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'rename', child: Text('이름 수정')),
+                PopupMenuItem(value: 'delete', child: Text('삭제하기')),
+                PopupMenuItem(value: 'goal', child: Text('연결 목표 변경')),
+              ],
+            ),
             if (todo.canAttachProof) ...[
               const SizedBox(width: AppSpacing.s8),
               _ProofButton(onTap: onAttachProof),
@@ -120,10 +143,10 @@ class TodoTile extends StatelessWidget {
 
   /// 미룸은 되돌릴 수 있는 경고, 모르는 값은 중립으로 둔다.
   ChipTone get _badgeTone => switch (todo.status) {
-        TodoStatus.deferred => ChipTone.warn,
-        TodoStatus.skipped => ChipTone.neutral,
-        _ => ChipTone.neutral,
-      };
+    TodoStatus.deferred => ChipTone.warn,
+    TodoStatus.skipped => ChipTone.neutral,
+    _ => ChipTone.neutral,
+  };
 
   /// 목표 · 소요시간 · 선언한 그룹.
   ///
@@ -136,63 +159,6 @@ class TodoTile extends StatelessWidget {
       if (todo.declarations.isNotEmpty) todo.declaredGroupLabel,
     ];
     return parts.join(' · ');
-  }
-}
-
-/// 목표를 갈아끼우는 버튼.
-///
-/// 목표는 만들 때가 아니라 **나중에** 정해지는 경우가 많다. 일단 적어 두고
-/// "이건 그 목표에 넣자" 가 되는 흐름이라, 목록에서 바로 바꿀 수 있어야 한다.
-///
-/// 목표 이름은 부제에 이미 있으므로 여기서는 깃발 하나로 상태만 알린다.
-/// 이름까지 또 적으면 한 줄에 같은 말이 두 번 나온다.
-class _GoalButton extends StatelessWidget {
-  const _GoalButton({required this.todo, required this.onTap});
-
-  final Todo todo;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final linked = todo.goalId != null;
-    // 선언한 항목은 서버가 목표 변경을 막는다. 흐리게 두되 눌리기는 한다 —
-    // 왜 안 되는지 말해 주려면 탭을 받아야 한다.
-    final locked = todo.isDeclared;
-
-    return Tooltip(
-      message: linked ? '목표 바꾸기' : '목표에 넣기',
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        // 그림은 32dp 지만 터치 영역은 48dp 를 지킨다 (디자인 §1.2).
-        child: Container(
-          width: 48,
-          height: 48,
-          alignment: Alignment.center,
-          child: Container(
-          width: 32,
-          height: 32,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: linked ? AppColors.purpleSurface : Colors.transparent,
-            shape: BoxShape.circle,
-            border: linked
-                ? null
-                : Border.all(color: AppColors.line, width: 1.2),
-          ),
-          child: Icon(
-            linked ? Icons.flag_rounded : Icons.outlined_flag_rounded,
-            size: 16,
-            color: locked
-                ? AppColors.disabled
-                : linked
-                    ? AppColors.purple
-                    : AppColors.muted,
-          ),
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -266,9 +232,7 @@ class _Checkbox extends StatelessWidget {
           border: done
               ? null
               : Border.all(
-                  color: inactive
-                      ? AppColors.line
-                      : AppColors.line,
+                  color: inactive ? AppColors.line : AppColors.line,
                   width: 1.5,
                 ),
         ),

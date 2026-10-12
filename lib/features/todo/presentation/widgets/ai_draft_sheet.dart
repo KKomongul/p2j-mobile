@@ -30,7 +30,11 @@ class AiDraftResult {
 /// AI가 틀릴 수 있다는 전제로 만든다. 제목은 바로 고칠 수 있게 열어 두고,
 /// 확신이 낮거나 규칙 파서로 내려온 결과는 그렇다고 말해 준다.
 class AiDraftSheet extends ConsumerStatefulWidget {
-  const AiDraftSheet({required this.text, required this.referenceDate, super.key});
+  const AiDraftSheet({
+    required this.text,
+    required this.referenceDate,
+    super.key,
+  });
 
   final String text;
   final String referenceDate;
@@ -79,11 +83,15 @@ class _AiDraftSheetState extends ConsumerState<AiDraftSheet> {
       _error = null;
     });
     try {
-      final result = await ref.read(aiRepositoryProvider).parse(
-            text: widget.text,
-            referenceDate: widget.referenceDate,
-          );
+      final result = await ref
+          .read(aiRepositoryProvider)
+          .parse(text: widget.text, referenceDate: widget.referenceDate);
       if (!mounted) return;
+      for (final controller in _titles.values) {
+        controller.dispose();
+      }
+      _titles.clear();
+      _selected.clear();
       for (final draft in result.drafts) {
         _titles[draft.draftId] = TextEditingController(text: draft.title);
         _selected.add(draft.draftId);
@@ -115,9 +123,9 @@ class _AiDraftSheetState extends ConsumerState<AiDraftSheet> {
     }
     if (items.isEmpty) return;
 
-    Navigator.of(context).pop(
-      AiDraftResult(items: items, parseId: result.parseId),
-    );
+    Navigator.of(
+      context,
+    ).pop(AiDraftResult(items: items, parseId: result.parseId));
   }
 
   @override
@@ -159,13 +167,12 @@ class _AiDraftSheetState extends ConsumerState<AiDraftSheet> {
         ),
         const SizedBox(height: AppSpacing.s20),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(
-            AiDraftResult(items: [TodoDraftInput(title: widget.text)]),
-          ),
+          onPressed: () => Navigator.of(
+            context,
+          ).pop(AiDraftResult(items: [TodoDraftInput(title: widget.text)])),
           child: const Text('말한 그대로 추가할게요'),
         ),
-        if (!quota)
-          TextButton(onPressed: _parse, child: const Text('다시 시도')),
+        if (!quota) TextButton(onPressed: _parse, child: const Text('다시 시도')),
       ],
     );
   }
@@ -183,20 +190,18 @@ class _AiDraftSheetState extends ConsumerState<AiDraftSheet> {
       children: [
         Row(
           children: [
-            Expanded(
-              child: Text('이렇게 정리했어요', style: AppTypography.titleM),
-            ),
+            Expanded(child: Text('이해한 게 맞나요?', style: AppTypography.titleM)),
             if (result.parseMethod.needsReview)
               const StatusChip(label: '확인 필요', tone: ChipTone.warn)
             else
-              const StatusChip(label: 'AI 정리', tone: ChipTone.active),
+              const StatusChip(label: 'AI 검수', tone: ChipTone.active),
           ],
         ),
         const SizedBox(height: AppSpacing.s4),
         Text(
           result.quotaExceeded
               ? '오늘 AI 사용을 많이 하셨어요. 간단히 나눠 두었으니 확인해 주세요.'
-              : '맞는 것만 남기고 고쳐 주세요.',
+              : '저장할 항목을 골라 주세요. 완료 체크는 저장 후 할 수 있어요.',
           style: AppTypography.caption.copyWith(color: AppColors.muted),
         ),
         const SizedBox(height: AppSpacing.s16),
@@ -212,7 +217,9 @@ class _AiDraftSheetState extends ConsumerState<AiDraftSheet> {
               referenceDate: widget.referenceDate,
               onToggle: () => setState(() {
                 final id = result.drafts[index].draftId;
-                _selected.contains(id) ? _selected.remove(id) : _selected.add(id);
+                _selected.contains(id)
+                    ? _selected.remove(id)
+                    : _selected.add(id);
               }),
               onChanged: () => setState(() {}),
             ),
@@ -221,7 +228,7 @@ class _AiDraftSheetState extends ConsumerState<AiDraftSheet> {
         const SizedBox(height: AppSpacing.s16),
         FilledButton(
           onPressed: count == 0 ? null : _confirm,
-          child: Text(count == 0 ? '추가할 항목을 골라 주세요' : '$count개 추가하기'),
+          child: Text(count == 0 ? '추가할 항목을 골라 주세요' : '맞아요, $count개 추가하기'),
         ),
       ],
     );
@@ -310,7 +317,10 @@ class _DraftRow extends StatelessWidget {
                     if (draft.estimatedMinutes != null)
                       StatusChip(label: '${draft.estimatedMinutes}분'),
                     if (draft.goalTitle != null)
-                      StatusChip(label: draft.goalTitle!, tone: ChipTone.active),
+                      StatusChip(
+                        label: draft.goalTitle!,
+                        tone: ChipTone.active,
+                      ),
                   ],
                 ),
               ],
@@ -354,7 +364,9 @@ class _Check extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? AppColors.mintInk : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.r4),
-          border: selected ? null : Border.all(color: AppColors.line, width: 1.5),
+          border: selected
+              ? null
+              : Border.all(color: AppColors.line, width: 1.5),
         ),
         child: selected
             ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)

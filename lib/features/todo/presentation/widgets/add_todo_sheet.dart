@@ -35,10 +35,11 @@ class SpokenSentence extends AddTodoResult {
 /// 사용자가 문장을 다듬어 입력할 필요가 없어야 한다. 타이핑은 빠져나갈
 /// 길로만 둔다.
 ///
-/// 말이 끝나면 바로 보내지 않고 받아 적은 문장을 한 번 보여 준다.
-/// 잘못 들었을 때 되돌릴 길이 없으면 음성 입력을 안 쓰게 된다.
+/// 종료 버튼을 누르면 바로 정리한다. 저장 전 초안 화면에서 다시 확인한다.
 class AddTodoSheet extends StatefulWidget {
-  const AddTodoSheet({super.key});
+  const AddTodoSheet({this.voiceController, super.key});
+
+  final VoiceInputController? voiceController;
 
   static Future<AddTodoResult?> show(BuildContext context) {
     return showModalBottomSheet<AddTodoResult>(
@@ -67,7 +68,8 @@ enum _Mode {
 }
 
 class _AddTodoSheetState extends State<AddTodoSheet> {
-  final _voice = VoiceInputController();
+  late final VoiceInputController _voice;
+  bool _finishing = false;
   final _titleController = TextEditingController();
   final _minutesController = TextEditingController();
   final _sentenceController = TextEditingController();
@@ -79,6 +81,7 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
   @override
   void initState() {
     super.initState();
+    _voice = widget.voiceController ?? VoiceInputController();
     _voice.addListener(_onVoiceChanged);
   }
 
@@ -94,10 +97,12 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
   }
 
   void _onVoiceChanged() {
-    if (!mounted) return;
-    if (_voice.status == VoiceStatus.done && _mode == _Mode.voice) {
+    if (!mounted || _finishing) return;
+    if (_voice.status == VoiceStatus.done &&
+        (_mode == _Mode.voice || _mode == _Mode.confirm)) {
       setState(() {
         _heard = _voice.text.trim();
+        _sentenceController.text = _heard;
         _mode = _Mode.confirm;
       });
       return;
@@ -106,8 +111,17 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
   }
 
   Future<void> _toggleListening() async {
+    if (_finishing) return;
     if (_voice.isListening) {
+      setState(() => _finishing = true);
       await _voice.stop();
+      if (!mounted) return;
+      final text = _voice.text.trim();
+      if (text.isNotEmpty && _voice.status != VoiceStatus.unavailable) {
+        Navigator.of(context).pop(SpokenSentence(text));
+        return;
+      }
+      setState(() => _finishing = false);
     } else {
       await _voice.start();
     }
@@ -158,15 +172,19 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
           fit: BoxFit.contain,
         ),
         Text(
-          listening ? '듣고 있어요' : '무엇을 할지 말해 주세요',
+          _finishing
+              ? '정리를 준비하고 있어요'
+              : listening
+              ? (_voice.recognizerReady ? '듣고 있어요' : '음성 인식 연결 중이에요')
+              : '무엇을 할지 말해 주세요',
           style: AppTypography.titleM,
         ),
         const SizedBox(height: AppSpacing.s8),
         Text(
           listening
               ? _voice.text.isEmpty
-                  ? '편하게 말씀하세요'
-                  : _voice.text
+                    ? '인식된 말이 여기에 표시돼요. 말한 뒤 종료 버튼을 눌러 주세요.'
+                    : _voice.text
               : '"내일 발표 자료 만들고 저녁에 운동" 처럼 한 번에요',
           textAlign: TextAlign.center,
           style: AppTypography.caption.copyWith(
@@ -176,7 +194,18 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
           ),
         ),
         const SizedBox(height: AppSpacing.s8),
-        MicButton(listening: listening, onTap: _toggleListening),
+        if (_finishing)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: CircularProgressIndicator(),
+          )
+        else
+          MicButton(listening: listening, onTap: _toggleListening),
+        if (listening && !_finishing)
+          FilledButton(
+            onPressed: _toggleListening,
+            child: const Text('말 다 했어요 · 바로 정리'),
+          ),
         if (failed) ...[
           Text(
             _voice.errorMessage ?? '마이크를 쓸 수 없어요.',
@@ -185,23 +214,26 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
           ),
           const SizedBox(height: AppSpacing.s12),
         ],
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextButton(
-              onPressed: () => setState(() => _mode = _Mode.dictate),
-              child: const Text('글로 적을게요'),
-            ),
-            Text(
-              '·',
-              style: AppTypography.caption.copyWith(color: AppColors.disabled),
-            ),
-            TextButton(
-              onPressed: () => setState(() => _mode = _Mode.typing),
-              child: const Text('한 개만 직접'),
-            ),
-          ],
-        ),
+        if (!_finishing)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: () => setState(() => _mode = _Mode.dictate),
+                child: const Text('글로 적을게요'),
+              ),
+              Text(
+                '·',
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.disabled,
+                ),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _mode = _Mode.typing),
+                child: const Text('한 개만 직접'),
+              ),
+            ],
+          ),
       ],
     );
   }
@@ -224,6 +256,7 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
           autofocus: true,
           maxLines: 3,
           minLines: 2,
+          maxLength: 500,
           textInputAction: TextInputAction.newline,
           style: AppTypography.body,
           onChanged: (_) => setState(() {}),
@@ -235,8 +268,9 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
         FilledButton(
           onPressed: _sentenceController.text.trim().isEmpty
               ? null
-              : () => Navigator.of(context)
-                  .pop(SpokenSentence(_sentenceController.text.trim())),
+              : () => Navigator.of(
+                  context,
+                ).pop(SpokenSentence(_sentenceController.text.trim())),
           child: const Text('정리해 주세요'),
         ),
         Center(
@@ -255,7 +289,7 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('이렇게 들었어요', style: AppTypography.titleM),
+        Text('이렇게 들은 게 맞나요?', style: AppTypography.titleM),
         const SizedBox(height: AppSpacing.s12),
         Container(
           width: double.infinity,
@@ -268,8 +302,7 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
         ),
         const SizedBox(height: AppSpacing.s20),
         FilledButton(
-          onPressed: () =>
-              Navigator.of(context).pop(SpokenSentence(_heard)),
+          onPressed: () => Navigator.of(context).pop(SpokenSentence(_heard)),
           child: const Text('정리해 주세요'),
         ),
         const SizedBox(height: AppSpacing.s4),
@@ -278,14 +311,15 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
           children: [
             TextButton(
               onPressed: () {
-                _titleController.text = _heard;
-                setState(() => _mode = _Mode.typing);
+                _sentenceController.text = _heard;
+                setState(() => _mode = _Mode.dictate);
               },
               child: const Text('직접 고칠게요'),
             ),
-            Text('·', style: AppTypography.caption.copyWith(
-              color: AppColors.disabled,
-            )),
+            Text(
+              '·',
+              style: AppTypography.caption.copyWith(color: AppColors.disabled),
+            ),
             TextButton(
               onPressed: () => setState(() => _mode = _Mode.voice),
               child: const Text('다시 말할게요'),

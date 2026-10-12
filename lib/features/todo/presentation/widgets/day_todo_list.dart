@@ -9,6 +9,7 @@ import '../../../../core/widgets/app_snack_bar.dart';
 import '../../../../core/widgets/empty_view.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../../../../core/widgets/loading_view.dart';
+import '../../../../core/widgets/paper_card.dart';
 import '../../data/todo_models.dart';
 import '../../../group/presentation/group_provider.dart';
 import '../todo_provider.dart';
@@ -17,6 +18,7 @@ import 'cleared_card.dart';
 import 'attach_proof_sheet.dart';
 import 'goal_swap_sheet.dart';
 import 'todo_tile.dart';
+import 'todo_rename_dialog.dart';
 
 /// 선택한 날짜의 진행 요약과 투두 목록.
 ///
@@ -78,11 +80,21 @@ class _TodoCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
-        for (var i = 0; i < items.length; i++) ...[
-          if (i > 0)
-            const Divider(indent: AppSpacing.s20, endIndent: AppSpacing.s20),
-          _dismissible(context, ref, items[i]),
-        ],
+        for (final item in items)
+          Padding(
+            key: ValueKey(item.todoId),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenH,
+              0,
+              AppSpacing.screenH,
+              AppSpacing.s8,
+            ),
+            child: PaperCard(
+              padding: EdgeInsets.zero,
+              elevated: false,
+              child: _dismissible(context, ref, item),
+            ),
+          ),
       ],
     );
   }
@@ -91,12 +103,15 @@ class _TodoCard extends ConsumerWidget {
     final tile = TodoTile(
       todo: todo,
       onToggle: () => _toggle(context, ref, todo),
-      onLockedTap: () => AppSnackBar.show(
-        context,
-        '그룹에 선언한 항목은 오늘 수정할 수 없어요.',
-      ),
+      onLockedTap: () => AppSnackBar.show(context, '그룹에 선언한 항목은 오늘 수정할 수 없어요.'),
       onAttachProof: () => _attachProof(context, ref, todo),
       onChangeGoal: () => _changeGoal(context, ref, todo),
+      onRename: () => _rename(context, ref, todo),
+      onDelete: () async {
+        if (await _confirmDelete(context, todo) && context.mounted) {
+          await _remove(context, ref, todo);
+        }
+      },
     );
 
     // 선언한 항목은 삭제가 막힌다. 스와이프 자체를 열어주지 않는다.
@@ -109,14 +124,54 @@ class _TodoCard extends ConsumerWidget {
         color: AppColors.coral,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: AppSpacing.s20),
-        child: const Icon(
-          Icons.delete_outline_rounded,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
       ),
+      confirmDismiss: (_) => _confirmDelete(context, todo),
       onDismissed: (_) => _remove(context, ref, todo),
       child: tile,
     );
+  }
+
+  Future<void> _rename(BuildContext context, WidgetRef ref, Todo todo) async {
+    if (todo.isDeclared) {
+      AppSnackBar.show(context, '그룹에 선언한 항목은 이름을 수정할 수 없어요.');
+      return;
+    }
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => TodoRenameDialog(
+        title: todo.title,
+        onSave: (title) => ref
+            .read(dayTodosControllerProvider(date).notifier)
+            .rename(todo, title),
+      ),
+    );
+  }
+
+  Future<bool> _confirmDelete(BuildContext context, Todo todo) async {
+    if (todo.isDeclared) {
+      AppSnackBar.show(context, '그룹에 선언한 항목은 삭제할 수 없어요.');
+      return false;
+    }
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('할 일을 삭제할까요?'),
+            content: Text('“${todo.title}” 항목이 삭제돼요.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('취소'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('삭제하기'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 
   /// 목표를 갈아끼운다.

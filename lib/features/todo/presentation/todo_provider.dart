@@ -58,10 +58,8 @@ class DayTodosController extends _$DayTodosController {
       if (willComplete) {
         // 응답에 목표 진행률(goal_progress)과 연속 기록(personal_streak)도 함께 온다.
         // 이 화면은 아직 쓰지 않지만, 목표 카드를 붙일 때 여기서 꺼내 쓰면 된다.
-        final updated = (await ref.read(todoRepositoryProvider).complete(
-              todo.todoId,
-            ))
-            .todo;
+        final updated =
+            (await ref.read(todoRepositoryProvider).complete(todo.todoId)).todo;
         final current = state.value;
         if (current == null) return;
         state = AsyncData(
@@ -88,11 +86,9 @@ class DayTodosController extends _$DayTodosController {
   }
 
   Future<void> add({required String title, int? estimatedMinutes}) async {
-    final created = await ref.read(todoRepositoryProvider).create(
-          title: title,
-          date: date,
-          estimatedMinutes: estimatedMinutes,
-        );
+    final created = await ref
+        .read(todoRepositoryProvider)
+        .create(title: title, date: date, estimatedMinutes: estimatedMinutes);
     final snapshot = state.value;
     if (snapshot == null) return;
     state = AsyncData(_recount(snapshot, [...snapshot.items, created]));
@@ -104,11 +100,9 @@ class DayTodosController extends _$DayTodosController {
   /// 선언한 항목은 서버가 422 DECLARED_TODO_LOCKED 로 막는다. 화면에서 먼저
   /// 걸러 내지만, 두 사람이 동시에 만졌을 때를 대비해 여기서도 그대로 던진다.
   Future<void> changeGoal(Todo todo, int? goalId) async {
-    final updated = await ref.read(todoRepositoryProvider).update(
-          todo.todoId,
-          goalId: goalId,
-          clearGoal: goalId == null,
-        );
+    final updated = await ref
+        .read(todoRepositoryProvider)
+        .update(todo.todoId, goalId: goalId, clearGoal: goalId == null);
     final snapshot = state.value;
     if (snapshot == null) return;
     state = AsyncData(
@@ -126,24 +120,38 @@ class DayTodosController extends _$DayTodosController {
   ///
   /// AI 가 다른 날짜로 잡은 초안도 함께 저장되므로, 이 목록에는 보고 있는
   /// 날짜의 것만 넣는다. 나머지는 주간 스트립을 다시 불러 반영한다.
-  Future<int> addMany(
-    List<TodoDraftInput> items, {
-    String? parseId,
-  }) async {
-    final result = await ref.read(todoRepositoryProvider).createBulk(
-          items: items,
-          parseId: parseId,
-        );
+  Future<int> addMany(List<TodoDraftInput> items, {String? parseId}) async {
+    final result = await ref
+        .read(todoRepositoryProvider)
+        .createBulk(items: items, parseId: parseId);
     final snapshot = state.value;
     if (snapshot != null) {
-      final forThisDay =
-          result.items.where((todo) => todo.date == date).toList();
-      state = AsyncData(
-        _recount(snapshot, [...snapshot.items, ...forThisDay]),
-      );
+      final forThisDay = result.items
+          .where((todo) => todo.date == date)
+          .toList();
+      state = AsyncData(_recount(snapshot, [...snapshot.items, ...forThisDay]));
     }
     _syncWeek();
     return result.createdCount;
+  }
+
+  Future<void> rename(Todo todo, String title) async {
+    final updated = await ref
+        .read(todoRepositoryProvider)
+        .updateTitle(todo.todoId, title);
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        items: [
+          for (final item in current.items)
+            if (item.todoId == todo.todoId)
+              item.copyWith(title: updated.title)
+            else
+              item,
+        ],
+      ),
+    );
   }
 
   Future<void> remove(Todo todo) async {

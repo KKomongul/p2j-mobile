@@ -65,9 +65,7 @@ class TodaySummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${summary.total}개 중 ${summary.done}개',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.muted,
-                  ),
+                  style: AppTypography.caption.copyWith(color: AppColors.muted),
                 ),
               ),
               if (summary.total == 0)
@@ -108,8 +106,10 @@ class _Track extends StatelessWidget {
             const Positioned.fill(
               child: ColoredBox(color: AppColors.amberSurface),
             ),
-            FractionallySizedBox(
-              widthFactor: value == 0 ? 0.0 : value,
+            AnimatedFractionallySizedBox(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOut,
+              widthFactor: value,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 240),
                 curve: Curves.easeOut,

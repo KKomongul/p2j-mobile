@@ -87,7 +87,7 @@ class _MicButtonState extends State<MicButton>
               );
             },
             child: Icon(
-              widget.listening ? Icons.graphic_eq_rounded : Icons.mic_rounded,
+              widget.listening ? Icons.stop_rounded : Icons.mic_rounded,
               color: Colors.white,
               size: widget.size * 0.42,
             ),
